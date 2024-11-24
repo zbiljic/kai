@@ -1,0 +1,37 @@
+version: 2
+
+project_name: kai
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: kai
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+      - -X "{{ .ModulePath }}/internal/buildinfo.Version={{ .Version }}"
+      - -X "{{ .ModulePath }}/internal/buildinfo.GitCommit={{ .ShortCommit }}"
+      - -X "{{ .ModulePath }}/internal/buildinfo.BuiltBy=goreleaser"
+
+archives:
+  - files:
+      - none*
+
+changelog:
+  disable: true
+
+release:
+  disable: true
