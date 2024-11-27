@@ -3,6 +3,7 @@ module github.com/zbiljic/kai
 go 1.23.3
 
 require (
+	github.com/Mist3rBru/go-clack v0.1.15
 	github.com/carlmjohnson/requests v0.24.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/spf13/cobra v1.8.1
@@ -16,4 +17,5 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/term v0.22.0 // indirect
 )
