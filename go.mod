@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/spf13/cobra v1.8.1
+	golang.org/x/sys v0.25.0
 )
 
 require (
