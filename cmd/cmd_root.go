@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"context"
+	"os"
+	"os/signal"
 	"strings"
 
+	"github.com/Mist3rBru/go-clack/prompts"
 	"github.com/spf13/cobra"
 
 	"github.com/zbiljic/kai/internal/buildinfo"
@@ -21,6 +25,13 @@ var rootCmd = &cobra.Command{
 		Commit:  buildinfo.GitCommit,
 		BuiltBy: buildinfo.BuiltBy,
 	}.String(),
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
+		cmd.SetContext(ctx)
+	},
+	RunE:          runRootE,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -31,6 +42,21 @@ func Execute() {
 			cmd.Usage() //nolint:errcheck
 		}
 
-		cobra.CheckErr(err)
+		val, ok := cmd.Context().Value(ctxKeyClackPromptStarted{}).(bool)
+		if ok && val {
+			prompts.ExitOnError(err)
+		} else {
+			cobra.CheckErr(err)
+		}
+	}
+}
+
+func runRootE(cmd *cobra.Command, args []string) error {
+	switch {
+	case isGenCmd():
+		return runGenE(cmd, args)
+	default:
+		cmd.Usage() //nolint:errcheck
+		return nil
 	}
 }
