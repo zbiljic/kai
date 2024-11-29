@@ -20,12 +20,14 @@ func (m Message) ToString() string {
 			m.Type = m.Type[:len(m.Type)-1]
 			m.Breaking = true
 		}
+		m.Type = strings.TrimSpace(m.Type)
 		out += m.Type
 		if m.Scope != "" {
 			if strings.HasSuffix(m.Scope, "!") {
 				m.Scope = m.Scope[:len(m.Scope)-1]
 				m.Breaking = true
 			}
+			m.Scope = strings.TrimSpace(m.Scope)
 			out += fmt.Sprintf("(%s)", m.Scope)
 		}
 		if m.Breaking {
@@ -33,6 +35,7 @@ func (m Message) ToString() string {
 		}
 		out += ": "
 	}
+	m.CommitMessage = strings.TrimSpace(m.CommitMessage)
 	out += m.CommitMessage
 	return out
 }
