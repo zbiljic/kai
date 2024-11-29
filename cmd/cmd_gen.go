@@ -10,6 +10,7 @@ import (
 	"github.com/Mist3rBru/go-clack/third_party/picocolors"
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/duke-git/lancet/v2/strutil"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 
@@ -95,9 +96,21 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	generateMessageSpinner.Stop("Changes analyzed", 0)
 
+	// remove empty messages
+	messages = slice.Filter(messages, func(_ int, s string) bool {
+		return strutil.IsNotBlank(s)
+	})
+
 	if len(messages) == 0 {
 		return errors.New("No commit messages were generated. Try again.")
 	}
+
+	// lowercase the first letter of commit message
+	messages = slice.Map(messages, func(_ int, s string) string {
+		m := commit.ParseMessage(s)
+		m.CommitMessage = strutil.LowerFirst(m.CommitMessage)
+		return m.ToString()
+	})
 
 	var message string
 
