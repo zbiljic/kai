@@ -63,7 +63,7 @@ func (p *Phind) Generate(ctx context.Context, systemPrompt, userPrompt string) (
 				"content": prompt,
 			},
 		},
-		"requested_model": "Phind-70B",
+		"requested_model": p.options.Model,
 		"user_input":      prompt,
 	}
 
