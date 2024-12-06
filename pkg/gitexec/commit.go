@@ -16,7 +16,7 @@ func CommitCmd(opts *CommitOptions) *exec.Cmd {
 	args := []string{"commit"}
 
 	if opts.Message != "" {
-		args = append(args, fmt.Sprintf("-m %s", opts.Message))
+		args = append(args, fmt.Sprintf("--message=%s", opts.Message))
 	}
 
 	cmd := exec.Command("git", args...)
