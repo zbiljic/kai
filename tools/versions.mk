@@ -5,4 +5,4 @@ GOLANGCI_LINT_VERSION ?= v1.64.6
 # renovate: datasource=github-releases depName=goreleaser/goreleaser
 GORELEASER_VERSION ?= v2.7.0
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
-GOTESTSUM_VERSION ?= v1.12.0
+GOTESTSUM_VERSION ?= v1.12.1
