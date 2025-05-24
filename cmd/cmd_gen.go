@@ -20,6 +20,25 @@ import (
 	"github.com/zbiljic/kai/pkg/promptsx"
 )
 
+// ProviderType represents the supported LLM providers.
+type ProviderType enumflag.Flag
+
+const (
+	// PhindProvider represents the Phind provider.
+	PhindProvider ProviderType = iota
+	// OpenAIProvider represents the OpenAI provider.
+	OpenAIProvider
+	// GoogleAIProvider represents the GoogleAI provider.
+	GoogleAIProvider
+)
+
+// ProviderIds maps ProviderType to their string representations.
+var ProviderIds = map[ProviderType][]string{
+	PhindProvider:    {"phind"},
+	OpenAIProvider:   {"openai"},
+	GoogleAIProvider: {"googleai"},
+}
+
 var genCmd = &cobra.Command{
 	Use: "gen",
 	Aliases: []string{
@@ -34,11 +53,13 @@ var genCmd = &cobra.Command{
 }
 
 var genFlags = genOptions{
-	Type: commit.ConventionalType,
+	Type:     commit.ConventionalType,
+	Provider: PhindProvider, // Default provider
 }
 
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
+	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai)")
 }
 
 func init() {
@@ -48,7 +69,8 @@ func init() {
 }
 
 type genOptions struct {
-	Type commit.Type
+	Type     commit.Type
+	Provider ProviderType
 }
 
 func runGenE(cmd *cobra.Command, args []string) error {
@@ -88,7 +110,21 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	generateMessageSpinner.Start("Generating commit message")
 
-	aip := provider.NewPhindProvider()
+	var aip llm.AIPrompt
+	switch genFlags.Provider {
+	case OpenAIProvider:
+		aip = provider.NewOpenAIProvider()
+	case GoogleAIProvider:
+		aip, err = provider.NewGoogleAIProvider()
+		if err != nil {
+			return err
+		}
+	case PhindProvider:
+		fallthrough
+	default:
+		aip = provider.NewPhindProvider()
+	}
+
 	messages, err := llm.GenerateCommitMessage(cmd.Context(), aip, genFlags.Type, diff)
 	if err != nil {
 		return err
