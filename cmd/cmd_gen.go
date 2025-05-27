@@ -30,13 +30,16 @@ const (
 	OpenAIProvider
 	// GoogleAIProvider represents the GoogleAI provider.
 	GoogleAIProvider
+	// OpenRouterProvider represents the OpenRouter provider.
+	OpenRouterProvider
 )
 
 // ProviderIds maps ProviderType to their string representations.
 var ProviderIds = map[ProviderType][]string{
-	PhindProvider:    {"phind"},
-	OpenAIProvider:   {"openai"},
-	GoogleAIProvider: {"googleai"},
+	PhindProvider:      {"phind"},
+	OpenAIProvider:     {"openai"},
+	GoogleAIProvider:   {"googleai"},
+	OpenRouterProvider: {"openrouter"},
 }
 
 var genCmd = &cobra.Command{
@@ -59,7 +62,7 @@ var genFlags = genOptions{
 
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
-	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai)")
+	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
 }
 
 func init() {
@@ -119,6 +122,8 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+	case OpenRouterProvider:
+		aip = provider.NewOpenRouterProvider()
 	case PhindProvider:
 		fallthrough
 	default:
