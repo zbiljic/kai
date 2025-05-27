@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/carlmjohnson/requests"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/sashabaranov/go-openai"
-	"github.com/tidwall/gjson"
 
 	"github.com/zbiljic/kai/pkg/llm"
 )
@@ -109,26 +107,4 @@ func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) 
 	messages = slice.Unique(messages)
 
 	return messages, nil
-}
-
-func (p *OpenAI) parseLine(line string) (string, error) {
-	data := strings.TrimPrefix(line, "data: ")
-
-	if val := gjson.Get(data, "choices.0.delta.content"); val.Exists() && val.Type == gjson.String {
-		return val.String(), nil
-	}
-
-	return "", nil
-}
-
-func (p *OpenAI) parseStreamResponse(responseText string) (string, error) {
-	text := ""
-	for _, line := range strings.Split(responseText, "\n") {
-		if parsedLine, err := p.parseLine(line); err != nil {
-			return "", err
-		} else {
-			text += parsedLine
-		}
-	}
-	return text, nil
 }
