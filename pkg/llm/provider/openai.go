@@ -95,7 +95,7 @@ func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) 
 	}
 
 	if len(respContent.Choices) == 0 {
-		return nil, errors.New("No completion choice available")
+		return nil, errors.New("no completion choice available")
 	}
 
 	// extract messages

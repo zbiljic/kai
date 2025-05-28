@@ -83,7 +83,7 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	workDir, err := gitWorkingTreeDir(getWd())
 	if err != nil {
-		return errors.New("The current directory must be a Git repository")
+		return errors.New("The current directory must be a Git repository") //nolint:staticcheck
 	}
 
 	detectingFilesSpinner := prompts.Spinner(prompts.SpinnerOptions{})
@@ -98,7 +98,7 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	if len(files) == 0 {
 		detectingFilesSpinner.Stop("Detecting staged files", 0)
-		return errors.New("No staged files detected.")
+		return errors.New("No staged files detected") //nolint:staticcheck
 	}
 
 	detectedMessage := fmt.Sprintf(
@@ -143,7 +143,7 @@ func runGenE(cmd *cobra.Command, args []string) error {
 	})
 
 	if len(messages) == 0 {
-		return errors.New("No commit messages were generated. Try again.")
+		return errors.New("No commit messages were generated. Try again.") //nolint:staticcheck
 	}
 
 	// lowercase the first letter of commit message

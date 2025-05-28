@@ -85,7 +85,7 @@ func (p *Phind) Generate(ctx context.Context, systemPrompt, userPrompt string) (
 	}
 
 	if responseText == "" {
-		return nil, errors.New("No completion choice available")
+		return nil, errors.New("no completion choice available")
 	}
 
 	fullText, err := p.parseStreamResponse(responseText)
