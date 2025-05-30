@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/carlmjohnson/requests"
 	"github.com/duke-git/lancet/v2/slice"
@@ -37,6 +38,10 @@ func NewOpenAIProvider(opts ...OpenAIOptions) llm.AIPrompt {
 		o = opts[0]
 	}
 
+	if o.ApiKey == "" {
+		o.ApiKey = os.Getenv("OPENAI_API_KEY")
+	}
+
 	if o.BaseURL == "" {
 		o.BaseURL = openaiBaseURL
 	}
@@ -50,6 +55,10 @@ func NewOpenAIProvider(opts ...OpenAIOptions) llm.AIPrompt {
 }
 
 func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
+	if p.options.ApiKey == "" {
+		return nil, errors.New("OpenAI API Key is not set")
+	}
+
 	payload := openai.ChatCompletionRequest{
 		Model: p.options.Model,
 		Messages: []openai.ChatCompletionMessage{
