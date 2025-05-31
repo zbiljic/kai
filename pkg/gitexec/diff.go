@@ -60,10 +60,5 @@ func Diff(opts *DiffOptions) ([]byte, error) {
 
 	cmd := DiffCmd(opts)
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return out, err
-	}
-
-	return out, nil
+	return run(cmd)
 }

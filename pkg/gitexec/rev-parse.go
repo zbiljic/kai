@@ -31,10 +31,5 @@ func RevParse(opts *RevParseOptions) ([]byte, error) {
 
 	cmd := RevParseCmd(opts)
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return out, err
-	}
-
-	return out, nil
+	return run(cmd)
 }
