@@ -77,3 +77,15 @@ func gitCommit(path, message string) error {
 
 	return nil
 }
+
+func gitAddAll(path string) error {
+	_, err := gitexec.Add(&gitexec.AddOptions{
+		CmdDir: path,
+		All:    true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

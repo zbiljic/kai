@@ -63,6 +63,7 @@ var genFlags = genOptions{
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
 	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
+	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 }
 
 func init() {
@@ -74,6 +75,7 @@ func init() {
 type genOptions struct {
 	Type     commit.Type
 	Provider ProviderType
+	All      bool
 }
 
 func runGenE(cmd *cobra.Command, args []string) error {
@@ -90,6 +92,14 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	detectingFilesSpinner.Start("Detecting staged files")
 
+	if genFlags.All {
+		err := gitAddAll(workDir)
+		if err != nil {
+			detectingFilesSpinner.Stop("Error staging files", 1)
+			return err
+		}
+	}
+
 	files, diff, err := gitDiffStaged(workDir)
 	if err != nil {
 		detectingFilesSpinner.Stop("Error detecting staged files", 1)
@@ -98,7 +108,13 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	if len(files) == 0 {
 		detectingFilesSpinner.Stop("Detecting staged files", 0)
-		return errors.New("No staged files detected") //nolint:staticcheck
+		// If `--all` was used, it's possible there were no changes to stage.
+		// Otherwise, it means no files were staged manually.
+		if genFlags.All {
+			return errors.New("No changes detected to stage") //nolint:staticcheck
+		} else {
+			return errors.New("No staged files detected") //nolint:staticcheck
+		}
 	}
 
 	detectedMessage := fmt.Sprintf(
