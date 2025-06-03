@@ -54,6 +54,10 @@ func NewOpenRouterProvider(opts ...OpenRouterOptions) llm.AIPrompt {
 	}
 }
 
+func (o *OpenRouter) IsAvailable() bool {
+	return os.Getenv("OPENROUTER_API_KEY") != ""
+}
+
 func (p *OpenRouter) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
 	if p.options.ApiKey == "" {
 		return nil, errors.New("OpenRouter API Key is not set")

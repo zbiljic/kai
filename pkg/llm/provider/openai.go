@@ -54,6 +54,10 @@ func NewOpenAIProvider(opts ...OpenAIOptions) llm.AIPrompt {
 	}
 }
 
+func (o *OpenAI) IsAvailable() bool {
+	return os.Getenv("OPENAI_API_KEY") != ""
+}
+
 func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
 	if p.options.ApiKey == "" {
 		return nil, errors.New("OpenAI API Key is not set")

@@ -66,6 +66,10 @@ func NewGoogleAIProvider(opts ...GoogleAIOptions) (llm.AIPrompt, error) {
 	}, nil
 }
 
+func (o *GoogleAI) IsAvailable() bool {
+	return os.Getenv("GEMINI_API_KEY") != ""
+}
+
 // Generate sends a prompt to the Google AI API and returns the generated text.
 func (p *GoogleAI) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
 	if p.client == nil {

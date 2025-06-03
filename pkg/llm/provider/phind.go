@@ -47,6 +47,10 @@ func NewPhindProvider(opts ...PhindOptions) llm.AIPrompt {
 	}
 }
 
+func (p *Phind) IsAvailable() bool {
+	return true
+}
+
 func (p *Phind) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
 	prompt := ""
 	prompt += systemPrompt
