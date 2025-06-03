@@ -145,20 +145,47 @@ func runGenE(cmd *cobra.Command, args []string) error {
 	generateMessageSpinner.Start("Generating commit message")
 
 	var aip llm.AIPrompt
-	switch genFlags.Provider {
-	case OpenAIProvider:
-		aip = provider.NewOpenAIProvider()
-	case GoogleAIProvider:
-		aip, err = provider.NewGoogleAIProvider()
-		if err != nil {
-			return err
+
+	// If provider is explicitly set via flag, use that
+	if cmd.Flags().Changed("provider") {
+		switch genFlags.Provider {
+		case OpenAIProvider:
+			aip = provider.NewOpenAIProvider()
+		case GoogleAIProvider:
+			aip, err = provider.NewGoogleAIProvider()
+			if err != nil {
+				return err
+			}
+		case OpenRouterProvider:
+			aip = provider.NewOpenRouterProvider()
+		case PhindProvider:
+			aip = provider.NewPhindProvider()
 		}
-	case OpenRouterProvider:
-		aip = provider.NewOpenRouterProvider()
-	case PhindProvider:
-		fallthrough
-	default:
-		aip = provider.NewPhindProvider()
+	} else {
+		// Try providers in preferred order
+		providers := []struct {
+			create func() (llm.AIPrompt, error)
+		}{
+			{create: func() (llm.AIPrompt, error) { return provider.NewGoogleAIProvider() }},
+			{create: func() (llm.AIPrompt, error) { return provider.NewOpenRouterProvider(), nil }},
+			{create: func() (llm.AIPrompt, error) { return provider.NewOpenAIProvider(), nil }},
+			{create: func() (llm.AIPrompt, error) { return provider.NewPhindProvider(), nil }},
+		}
+
+		for _, p := range providers {
+			provider, err := p.create()
+			if err != nil {
+				continue
+			}
+			if provider.IsAvailable() {
+				aip = provider
+				break
+			}
+		}
+
+		if aip == nil {
+			return errors.New("no available LLM providers found - please configure at least one provider's API key")
+		}
 	}
 
 	messages, err := llm.GenerateCommitMessage(cmd.Context(), aip, genFlags.Type, diff)
