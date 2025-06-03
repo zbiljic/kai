@@ -188,6 +188,8 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	generateMessageSpinner.Message(fmt.Sprintf("Generating commit message with %s", aip.String()))
+
 	messages, err := llm.GenerateCommitMessage(cmd.Context(), aip, genFlags.Type, diff)
 	if err != nil {
 		return err
