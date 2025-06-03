@@ -92,28 +92,43 @@ func runGenE(cmd *cobra.Command, args []string) error {
 
 	detectingFilesSpinner.Start("Detecting staged files")
 
+	// Check for staged files first
+	files, _, err := gitDiffStaged(workDir)
+	if err != nil {
+		detectingFilesSpinner.Stop("Error detecting staged files", 1)
+		return err
+	}
+
+	// If no files are staged, automatically set All flag to true
+	if len(files) == 0 {
+		genFlags.All = true
+	}
+
+	var diff string
 	if genFlags.All {
 		err := gitAddAll(workDir)
 		if err != nil {
 			detectingFilesSpinner.Stop("Error staging files", 1)
 			return err
 		}
-	}
 
-	files, diff, err := gitDiffStaged(workDir)
-	if err != nil {
-		detectingFilesSpinner.Stop("Error detecting staged files", 1)
-		return err
-	}
+		// Get updated list of staged files after adding all
+		files, diff, err = gitDiffStaged(workDir)
+		if err != nil {
+			detectingFilesSpinner.Stop("Error detecting staged files", 1)
+			return err
+		}
 
-	if len(files) == 0 {
-		detectingFilesSpinner.Stop("Detecting staged files", 0)
-		// If `--all` was used, it's possible there were no changes to stage.
-		// Otherwise, it means no files were staged manually.
-		if genFlags.All {
+		if len(files) == 0 {
+			detectingFilesSpinner.Stop("No changes detected to stage", 0)
 			return errors.New("No changes detected to stage") //nolint:staticcheck
-		} else {
-			return errors.New("No staged files detected") //nolint:staticcheck
+		}
+	} else {
+		// Get the diff for already staged files
+		_, diff, err = gitDiffStaged(workDir)
+		if err != nil {
+			detectingFilesSpinner.Stop("Error detecting staged files", 1)
+			return err
 		}
 	}
 
