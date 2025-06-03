@@ -6,6 +6,9 @@ import (
 
 // AIPrompt is an interface for generating prompts from input data.
 type AIPrompt interface {
+	// String returns the name of the provider.
+	String() string
+
 	// IsAvailable checks if the provider has all required configuration (e.g. API keys)
 	// to be used. Returns true if the provider can be used, false otherwise.
 	IsAvailable() bool

@@ -54,6 +54,10 @@ func NewOpenAIProvider(opts ...OpenAIOptions) llm.AIPrompt {
 	}
 }
 
+func (o *OpenAI) String() string {
+	return fmt.Sprintf("OpenAI (%s)", o.options.Model)
+}
+
 func (o *OpenAI) IsAvailable() bool {
 	return os.Getenv("OPENAI_API_KEY") != ""
 }

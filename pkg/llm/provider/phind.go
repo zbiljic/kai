@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/carlmjohnson/requests"
@@ -45,6 +46,10 @@ func NewPhindProvider(opts ...PhindOptions) llm.AIPrompt {
 	return &Phind{
 		options: o,
 	}
+}
+
+func (p *Phind) String() string {
+	return fmt.Sprintf("Phind (%s)", p.options.Model)
 }
 
 func (p *Phind) IsAvailable() bool {

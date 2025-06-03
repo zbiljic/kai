@@ -54,6 +54,10 @@ func NewOpenRouterProvider(opts ...OpenRouterOptions) llm.AIPrompt {
 	}
 }
 
+func (o *OpenRouter) String() string {
+	return fmt.Sprintf("OpenRouter (%s)", o.options.Model)
+}
+
 func (o *OpenRouter) IsAvailable() bool {
 	return os.Getenv("OPENROUTER_API_KEY") != ""
 }

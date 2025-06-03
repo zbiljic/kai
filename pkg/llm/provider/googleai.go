@@ -66,6 +66,10 @@ func NewGoogleAIProvider(opts ...GoogleAIOptions) (llm.AIPrompt, error) {
 	}, nil
 }
 
+func (o *GoogleAI) String() string {
+	return fmt.Sprintf("GoogleAI (%s)", o.options.Model)
+}
+
 func (o *GoogleAI) IsAvailable() bool {
 	return os.Getenv("GEMINI_API_KEY") != ""
 }
