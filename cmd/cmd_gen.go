@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -78,57 +79,50 @@ type genOptions struct {
 	All      bool
 }
 
-func runGenE(cmd *cobra.Command, args []string) error {
+func genSetup(cmd *cobra.Command) (string, error) {
 	prompts.Intro(picocolors.BgCyan(picocolors.Black(fmt.Sprintf(" %s ", AppName))))
 	// in order to show custom error
 	injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
 
 	workDir, err := gitWorkingTreeDir(getWd())
 	if err != nil {
-		return errors.New("The current directory must be a Git repository") //nolint:staticcheck
+		return "", errors.New("The current directory must be a Git repository") //nolint:staticcheck
 	}
+	return workDir, nil
+}
 
+func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) {
 	detectingFilesSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-
 	detectingFilesSpinner.Start("Detecting staged files")
 
 	// Check for staged files first
-	files, _, err := gitDiffStaged(workDir)
+	files, diff, err := gitDiffStaged(workDir)
 	if err != nil {
 		detectingFilesSpinner.Stop("Error detecting staged files", 1)
-		return err
+		return nil, "", err
 	}
 
 	// If no files are staged, automatically set All flag to true
 	if len(files) == 0 {
-		genFlags.All = true
+		all = true
 	}
 
-	var diff string
-	if genFlags.All {
-		err := gitAddAll(workDir)
-		if err != nil {
+	if all {
+		if err := gitAddAll(workDir); err != nil {
 			detectingFilesSpinner.Stop("Error staging files", 1)
-			return err
+			return nil, "", err
 		}
 
 		// Get updated list of staged files after adding all
 		files, diff, err = gitDiffStaged(workDir)
 		if err != nil {
 			detectingFilesSpinner.Stop("Error detecting staged files", 1)
-			return err
+			return nil, "", err
 		}
 
 		if len(files) == 0 {
 			detectingFilesSpinner.Stop("No changes detected to stage", 0)
-			return errors.New("No changes detected to stage") //nolint:staticcheck
-		}
-	} else {
-		// Get the diff for already staged files
-		_, diff, err = gitDiffStaged(workDir)
-		if err != nil {
-			detectingFilesSpinner.Stop("Error detecting staged files", 1)
-			return err
+			return nil, "", errors.New("No changes detected to stage") //nolint:staticcheck
 		}
 	}
 
@@ -139,60 +133,54 @@ func runGenE(cmd *cobra.Command, args []string) error {
 	)
 
 	detectingFilesSpinner.Stop(detectedMessage, 0)
+	return files, diff, nil
+}
 
-	generateMessageSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-
-	generateMessageSpinner.Start("Generating commit message")
-
-	var aip llm.AIPrompt
-
-	// If provider is explicitly set via flag, use that
+func genInitializeLLMProvider(cmd *cobra.Command, providerType ProviderType) (llm.AIPrompt, error) {
 	if cmd.Flags().Changed("provider") {
-		switch genFlags.Provider {
+		switch providerType {
 		case OpenAIProvider:
-			aip = provider.NewOpenAIProvider()
+			return provider.NewOpenAIProvider(), nil
 		case GoogleAIProvider:
-			aip, err = provider.NewGoogleAIProvider()
-			if err != nil {
-				return err
-			}
+			return provider.NewGoogleAIProvider()
 		case OpenRouterProvider:
-			aip = provider.NewOpenRouterProvider()
+			return provider.NewOpenRouterProvider(), nil
 		case PhindProvider:
-			aip = provider.NewPhindProvider()
-		}
-	} else {
-		// Try providers in preferred order
-		providers := []struct {
-			create func() (llm.AIPrompt, error)
-		}{
-			{create: func() (llm.AIPrompt, error) { return provider.NewGoogleAIProvider() }},
-			{create: func() (llm.AIPrompt, error) { return provider.NewOpenRouterProvider(), nil }},
-			{create: func() (llm.AIPrompt, error) { return provider.NewOpenAIProvider(), nil }},
-			{create: func() (llm.AIPrompt, error) { return provider.NewPhindProvider(), nil }},
-		}
-
-		for _, p := range providers {
-			provider, err := p.create()
-			if err != nil {
-				continue
-			}
-			if provider.IsAvailable() {
-				aip = provider
-				break
-			}
-		}
-
-		if aip == nil {
-			return errors.New("no available LLM providers found - please configure at least one provider's API key")
+			return provider.NewPhindProvider(), nil
 		}
 	}
 
+	// Try providers in preferred order
+	providers := []struct {
+		create func() (llm.AIPrompt, error)
+	}{
+		{create: func() (llm.AIPrompt, error) { return provider.NewGoogleAIProvider() }},
+		{create: func() (llm.AIPrompt, error) { return provider.NewOpenRouterProvider(), nil }},
+		{create: func() (llm.AIPrompt, error) { return provider.NewOpenAIProvider(), nil }},
+		{create: func() (llm.AIPrompt, error) { return provider.NewPhindProvider(), nil }},
+	}
+
+	for _, p := range providers {
+		provider, err := p.create()
+		if err != nil {
+			continue
+		}
+		if provider.IsAvailable() {
+			return provider, nil
+		}
+	}
+
+	return nil, errors.New("no available LLM providers found - please configure at least one provider's API key")
+}
+
+func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, diff string) ([]string, error) {
+	generateMessageSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+	generateMessageSpinner.Start("Generating commit message")
 	generateMessageSpinner.Message(fmt.Sprintf("Generating commit message with %s", aip.String()))
 
-	messages, err := llm.GenerateCommitMessage(cmd.Context(), aip, genFlags.Type, diff)
+	messages, err := llm.GenerateCommitMessage(ctx, aip, commitType, diff)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	generateMessageSpinner.Stop("Changes analyzed", 0)
@@ -203,18 +191,18 @@ func runGenE(cmd *cobra.Command, args []string) error {
 	})
 
 	if len(messages) == 0 {
-		return errors.New("No commit messages were generated. Try again.") //nolint:staticcheck
+		return nil, errors.New("No commit messages were generated. Try again.") //nolint:staticcheck
 	}
 
 	// lowercase the first letter of commit message
-	messages = slice.Map(messages, func(_ int, s string) string {
+	return slice.Map(messages, func(_ int, s string) string {
 		m := commit.ParseMessage(s)
 		m.CommitMessage = strutil.LowerFirst(m.CommitMessage)
 		return m.ToString()
-	})
+	}), nil
+}
 
-	var message string
-
+func genHandleMessageSelection(messages []string) (string, error) {
 	for {
 		selected, err := promptsx.SelectEdit(promptsx.SelectEditParams[string]{
 			Message: fmt.Sprintf("Pick a commit message to use: %s", picocolors.Gray("(Ctrl+c to exit)")),
@@ -226,99 +214,132 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			if prompts.IsCancel(err) {
 				prompts.Outro("Commit cancelled")
-				return nil
+				return "", nil
 			}
-			return err
+			return "", err
 		}
 
-		message = selected.Value
+		message := selected.Value
 
-		// if we need to edit the message
-		if selected.Edit {
-			commitMessage := commit.ParseMessage(message)
+		if !selected.Edit {
+			return message, nil
+		}
 
-			err := prompts.Workflow(&commitMessage).
-				ConditionalStep("Type",
-					func() bool {
-						return commitMessage.Type != "" || genFlags.Type == commit.ConventionalType
-					},
-					func() (any, error) {
-						var options []*prompts.SelectOption[string]
+		editedMessage, err := genEditCommitMessage(message, genFlags.Type)
+		if err != nil {
+			if prompts.IsCancel(err) {
+				prompts.Outro("Commit cancelled")
+				return "", nil
+			}
+			return "", err
+		}
 
-						// in case of unknown type
-						if _, ok := commit.ConventionalCommitTypes[commitMessage.Type]; !ok {
-							options = append(options, &prompts.SelectOption[string]{
-								Label: commitMessage.Type,
-								Value: commitMessage.Type,
-							})
-						}
+		messages = []string{editedMessage}
+	}
+}
 
-						// add rest of the conventional commit types
-						options = append(options, slice.FlatMap(
-							maputil.Keys(commit.ConventionalCommitTypes),
-							func(_ int, item string) []*prompts.SelectOption[string] {
-								return []*prompts.SelectOption[string]{
-									{Label: item, Value: item},
-								}
-							})...)
+func genEditCommitMessage(message string, commitType commit.Type) (string, error) {
+	commitMessage := commit.ParseMessage(message)
 
-						// sort options
-						sort.Slice(options, func(i, j int) bool {
-							return options[i].Label < options[j].Label
-						})
+	err := prompts.Workflow(&commitMessage).
+		ConditionalStep("Type",
+			func() bool {
+				return commitMessage.Type != "" || commitType == commit.ConventionalType
+			},
+			func() (any, error) {
+				var options []*prompts.SelectOption[string]
 
-						return prompts.Select(prompts.SelectParams[string]{
-							Message:      "Select a type",
-							InitialValue: commitMessage.Type,
-							Options:      options,
-						})
-					}).
-				ConditionalStep("Scope",
-					func() bool {
-						return commitMessage.Type != ""
-					},
-					func() (any, error) {
-						initialValue := commitMessage.Scope
-						if commitMessage.Breaking {
-							initialValue += "!"
-						}
-						return prompts.Text(prompts.TextParams{
-							Message:      "Enter a scope",
-							Placeholder:  "<optional scope>",
-							InitialValue: initialValue,
-							Validate: func(value string) error {
-								return nil
-							},
-						})
-					}).
-				Step("CommitMessage", func() (any, error) {
-					return prompts.Text(prompts.TextParams{
-						Message:      "Enter a message",
-						Placeholder:  "<message>",
-						InitialValue: commitMessage.CommitMessage,
-						Validate: func(value string) error {
-							if value == "" {
-								return errors.New("please enter a message")
-							}
-							return nil
-						},
+				// in case of unknown type
+				if _, ok := commit.ConventionalCommitTypes[commitMessage.Type]; !ok {
+					options = append(options, &prompts.SelectOption[string]{
+						Label: commitMessage.Type,
+						Value: commitMessage.Type,
 					})
-				}).
-				Run()
-			if err != nil {
-				if prompts.IsCancel(err) {
-					prompts.Outro("Commit cancelled")
-					return nil
 				}
-				return err
-			}
 
-			message = commitMessage.ToString()
+				// add rest of the conventional commit types
+				options = append(options, slice.FlatMap(
+					maputil.Keys(commit.ConventionalCommitTypes),
+					func(_ int, item string) []*prompts.SelectOption[string] {
+						return []*prompts.SelectOption[string]{
+							{Label: item, Value: item},
+						}
+					})...)
 
-			messages = []string{message}
-		} else {
-			break
-		}
+				// sort options
+				sort.Slice(options, func(i, j int) bool {
+					return options[i].Label < options[j].Label
+				})
+
+				return prompts.Select(prompts.SelectParams[string]{
+					Message:      "Select a type",
+					InitialValue: commitMessage.Type,
+					Options:      options,
+				})
+			}).
+		ConditionalStep("Scope",
+			func() bool {
+				return commitMessage.Type != ""
+			},
+			func() (any, error) {
+				initialValue := commitMessage.Scope
+				if commitMessage.Breaking {
+					initialValue += "!"
+				}
+				return prompts.Text(prompts.TextParams{
+					Message:      "Enter a scope",
+					Placeholder:  "<optional scope>",
+					InitialValue: initialValue,
+					Validate: func(value string) error {
+						return nil
+					},
+				})
+			}).
+		Step("CommitMessage", func() (any, error) {
+			return prompts.Text(prompts.TextParams{
+				Message:      "Enter a message",
+				Placeholder:  "<message>",
+				InitialValue: commitMessage.CommitMessage,
+				Validate: func(value string) error {
+					if value == "" {
+						return errors.New("please enter a message")
+					}
+					return nil
+				},
+			})
+		}).
+		Run()
+	if err != nil {
+		return "", err
+	}
+
+	return commitMessage.ToString(), nil
+}
+
+func runGenE(cmd *cobra.Command, args []string) error {
+	workDir, err := genSetup(cmd)
+	if err != nil {
+		return err
+	}
+
+	_, diff, err := genDetectAndStageFiles(workDir, genFlags.All)
+	if err != nil {
+		return err
+	}
+
+	aip, err := genInitializeLLMProvider(cmd, genFlags.Provider)
+	if err != nil {
+		return err
+	}
+
+	messages, err := genMessages(cmd.Context(), aip, genFlags.Type, diff)
+	if err != nil {
+		return err
+	}
+
+	message, err := genHandleMessageSelection(messages)
+	if err != nil || message == "" {
+		return err
 	}
 
 	if err := gitCommit(workDir, message); err != nil {
@@ -326,7 +347,6 @@ func runGenE(cmd *cobra.Command, args []string) error {
 	}
 
 	prompts.Outro(fmt.Sprintf("%s Successfully committed", picocolors.Green("✔")))
-
 	return nil
 }
 
