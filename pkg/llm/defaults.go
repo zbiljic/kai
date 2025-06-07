@@ -20,8 +20,11 @@ var (
 3. Output only the commit message without any explanations
 4. Follow the format: %s
 `
-	PromptMaxLengthFormat = "Commit message must be a maximum of %d characters."
-	PromptCodeDiffFormat  = "Code diff:\n```diff\n%s\n```\n"
+	PromptMaxLengthFormat       = "Commit message must be a maximum of %d characters."
+	PromptCodeDiffFormat        = "Code diff:\n```diff\n%s\n```\n"
+	PromptPreviousCommitsFormat = `Here are some previous commit messages for similar changes (use these as a style reference):
+%s
+`
 )
 
 var commitTypes = map[commit.Type]string{
