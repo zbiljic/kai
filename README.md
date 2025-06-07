@@ -12,6 +12,7 @@
 *   **Interactive Workflow**: Provides a selection of generated messages and allows interactive editing before committing. You can also quickly select an option by typing its corresponding number.
 *   **Intelligent Provider Selection**: Automatically detects and prioritizes available LLM providers based on configured API keys, falling back to others if a preferred one isn't configured.
 *   **Automatic Staging**: If no files are staged, `kai` can automatically stage all changes in tracked files before generating a message.
+*   **Contextual Commit History**: Can include previous commit messages for similar files in the prompt, helping the AI generate more consistent and contextually relevant messages.
 *   **Multiple LLM Providers**: Supports various Large Language Model providers for flexibility:
     *   [Phind](https://www.phind.com/) (Default fallback)
     *   [OpenAI](https://openai.com/) (GPT-4o Mini, GPT-3.5 Turbo, etc.)
@@ -102,6 +103,11 @@ The `make install` command will compile the `kai` executable and place it in you
     Available types: `conventional` (default), `simple`.
     *   `conventional`: Generates messages adhering to the Conventional Commits specification (e.g., `type(scope): message`).
     *   `simple`: Generates plain messages like `message`.
+
+*   **Include Previous Commit History**: By default, `kai` includes previous commit messages for relevant files to provide context to the AI. To disable this, use the `--history=false` flag:
+    ```bash
+    kai gen --history=false
+    ```
 
 ## ⚙️ Configuration
 
