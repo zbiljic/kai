@@ -89,3 +89,88 @@ func gitAddAll(path string) error {
 
 	return nil
 }
+
+// gitStagedFiles returns a list of staged files.
+func gitStagedFiles(workDir string) ([]string, error) {
+	opts := &gitexec.StatusOptions{
+		CmdDir:    workDir,
+		Porcelain: true,
+	}
+
+	output, err := gitexec.Status(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(output) == 0 {
+		return nil, nil
+	}
+
+	var stagedFiles []string
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		// Parse the status line (format: XY PATH)
+		// X is the status in the index/staging area
+		if len(line) > 3 {
+			statusChar := line[0]
+			// Staged files have one of these statuses in the first column:
+			// A: addition, M: modification, D: deletion, R: rename, C: copy
+			if statusChar == 'A' || statusChar == 'M' || statusChar == 'D' ||
+				statusChar == 'R' || statusChar == 'C' {
+				// Extract the file path (skip the status prefix and any spaces)
+				path := strings.TrimSpace(line[3:])
+				stagedFiles = append(stagedFiles, path)
+			}
+		}
+	}
+
+	return stagedFiles, nil
+}
+
+// gitPreviousCommitMessages returns previous commit messages for the specified files.
+func gitPreviousCommitMessages(workDir string, files []string, maxCommits int) ([]string, error) {
+	if len(files) == 0 {
+		return nil, nil
+	}
+
+	opts := &gitexec.LogOptions{
+		CmdDir:   workDir,
+		MaxCount: maxCommits,
+		Format:   "%s", // subject only
+		Path:     files,
+	}
+
+	output, err := gitexec.Log(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(output) == 0 {
+		return nil, nil
+	}
+
+	// Split by newlines and deduplicate
+	messages := strings.Split(strings.TrimSpace(string(output)), "\n")
+
+	// Deduplicate messages
+	seen := make(map[string]struct{})
+	var deduped []string
+
+	for _, msg := range messages {
+		if msg == "" {
+			continue
+		}
+
+		if _, exists := seen[msg]; !exists {
+			seen[msg] = struct{}{}
+			deduped = append(deduped, msg)
+		}
+	}
+
+	return deduped, nil
+}

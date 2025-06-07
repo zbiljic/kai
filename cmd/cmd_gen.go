@@ -50,21 +50,24 @@ var genCmd = &cobra.Command{
 		"generate",
 	},
 	Short:       "Generate commit message",
-	Long:        `Generates commit message based on staged changes`,
+	Long:        `Generates commit message based on staged changes. Can optionally include previous commit messages for similar files as examples to maintain consistent style.`,
 	Annotations: map[string]string{"group": "main"},
 	Args:        cobra.ArbitraryArgs,
 	RunE:        runGenE,
 }
 
 var genFlags = genOptions{
-	Type:     commit.ConventionalType,
-	Provider: PhindProvider, // Default provider
+	Type:           commit.ConventionalType,
+	Provider:       PhindProvider,
+	All:            false,
+	IncludeHistory: true,
 }
 
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
 	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
 	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
+	cmd.Flags().BoolVar(&genFlags.IncludeHistory, "history", true, "Include previous commit messages as examples")
 }
 
 func init() {
@@ -74,9 +77,10 @@ func init() {
 }
 
 type genOptions struct {
-	Type     commit.Type
-	Provider ProviderType
-	All      bool
+	Type           commit.Type
+	Provider       ProviderType
+	All            bool
+	IncludeHistory bool
 }
 
 func genSetup(cmd *cobra.Command) (string, error) {
@@ -173,18 +177,80 @@ func genInitializeLLMProvider(cmd *cobra.Command, providerType ProviderType) (ll
 	return nil, errors.New("no available LLM providers found - please configure at least one provider's API key")
 }
 
-func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, diff string) ([]string, error) {
+// genGetPreviousCommitsForStagedFiles returns previous commit messages for all staged files.
+func genGetPreviousCommitsForStagedFiles(workDir string) ([]string, error) {
+	// Get staged files
+	stagedFiles, err := gitStagedFiles(workDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no staged files, return empty slice
+	if len(stagedFiles) == 0 {
+		return []string{}, nil
+	}
+
+	// Get previous commit messages for staged files
+	allMessages := make(map[string]struct{})
+	for _, file := range stagedFiles {
+		fileMessages, err := gitPreviousCommitMessages(workDir, []string{file}, llm.DefaultMaxCommitsPerFile)
+		if err != nil {
+			continue // Skip files with errors
+		}
+
+		// Add messages to the deduplicated set
+		for _, msg := range fileMessages {
+			allMessages[msg] = struct{}{}
+		}
+
+		// Limit the total number of messages
+		if len(allMessages) >= llm.DefaultMaxTotalCommits {
+			break
+		}
+	}
+
+	// Convert map to slice
+	var result []string
+	for msg := range allMessages {
+		result = append(result, msg)
+		if len(result) >= llm.DefaultMaxTotalCommits {
+			break
+		}
+	}
+
+	return result, nil
+}
+
+func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, workDir, diff string) ([]string, error) {
 	generateMessageSpinner := prompts.Spinner(prompts.SpinnerOptions{})
 	generateMessageSpinner.Start("Generating commit message")
 	generateMessageSpinner.Message(fmt.Sprintf("Generating commit message with %s", aip.String()))
 
-	messages, err := llm.GenerateCommitMessage(ctx, aip, commitType, diff)
+	var messages []string
+	var err error
+
+	// Decide whether to include commit history based on the flag
+	if genFlags.IncludeHistory {
+		// Get previous commit messages for staged files
+		var previousCommits []string
+		previousCommits, err = genGetPreviousCommitsForStagedFiles(workDir)
+		if err == nil {
+			messages, err = llm.GenerateCommitMessageWithPreviousCommits(ctx, aip, commitType, workDir, diff, previousCommits)
+		}
+	} else {
+		messages, err = llm.GenerateCommitMessage(ctx, aip, commitType, diff)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	generateMessageSpinner.Stop("Changes analyzed", 0)
+	return filterAndProcessMessages(messages)
+}
 
+// filterAndProcessMessages removes empty messages and formats them properly
+func filterAndProcessMessages(messages []string) ([]string, error) {
 	// remove empty messages
 	messages = slice.Filter(messages, func(_ int, s string) bool {
 		return strutil.IsNotBlank(s)
@@ -332,7 +398,7 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	messages, err := genMessages(cmd.Context(), aip, genFlags.Type, diff)
+	messages, err := genMessages(cmd.Context(), aip, genFlags.Type, workDir, diff)
 	if err != nil {
 		return err
 	}
