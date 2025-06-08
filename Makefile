@@ -13,8 +13,6 @@ else
 VERBOSE="true"
 endif
 
-include tools/tools.mk
-
 # include per-user customization after all variables are defined
 -include Makefile.local
 
@@ -38,9 +36,19 @@ help: ## Display this usage information
 			{printf $(HELP_FORMAT), $$1, $$2}'
 	@echo ""
 
+.PHONY: tools
+tools:
+	@command -v mise >/dev/null 2>&1 || { \
+	  echo >&2 "Error: 'mise' not found in your PATH."; \
+	  echo >&2 "Quick-install: 'curl https://mise.run | sh'"; \
+	  echo >&2 "Full install instructions: https://mise.jdx.dev/installing-mise.html"; \
+	  exit 1; \
+	}
+
 # Only for CI compliance
 .PHONY: bootstrap
 bootstrap: tools # Install all dependencies
+	@mise install
 
 GO_VERSION := $(shell go mod edit -json | sed -En 's/"Go": "([^"]*).*/\1/p' | tr -d '[:blank:]')
 
@@ -55,15 +63,15 @@ go-mod-tidy:
 tidy: go-mod-tidy
 
 .PHONY: gofmt
-gofmt: lint-deps
+gofmt: tools
 gofmt: ## Format Go code
-	@$(GOFUMPT) -extra -l -w .
+	@mise x -- gofumpt -extra -l -w .
 
 .PHONY: lint
-lint: lint-deps
+lint: tools
 lint: ## Lint the source code
 	@echo "==> Linting source code..."
-	@$(GOLANGCI_LINT) run --config=.golangci.yml --fix
+	@mise x -- golangci-lint run --config=.golangci.yml --fix
 
 	@echo "==> Checking Go mod..."
 	@$(MAKE) tidy
@@ -74,10 +82,10 @@ lint: ## Lint the source code
 		exit 1; fi
 
 .PHONY: test
-test: $(GOTESTSUM)
+test: tools
 test: ## Run the test suite and/or any other tests
 	CGO_ENABLED=1 $(if $(ENABLE_RACE),GORACE="strip_path_prefix=$(GOPATH)/src") \
-		$(GOTESTSUM) \
+		mise x -- gotestsum \
 		--junitfile=junit.unit.xml \
 		--junitfile-project-name=$(PROJECT_NAME) \
 		-- \
@@ -115,15 +123,15 @@ install-$(PROJECT_NAME):
 	fi;
 
 .PHONY: package
-package: $(GORELEASER)
-	$(GORELEASER) release --config=.goreleaser.yaml --snapshot --skip=publish --clean
+package: tools
+	mise x -- goreleaser release --config=.goreleaser.yaml --snapshot --skip=publish --clean
 
 .PHONY: release
-release: $(GORELEASER)
-	$(GORELEASER) release --config=.goreleaser.yaml --clean
+release: tools
+	mise x -- goreleaser release --config=.goreleaser.yaml --clean
 
 .PHONY: nightly
-nightly: $(GORELEASER)
+nightly: tools
 	@if [ ! -z $${GORELEASER_CURRENT_TAG+x} ]; then \
 		git tag $(GORELEASER_CURRENT_TAG); \
 		$(MAKE) release; \
