@@ -8,7 +8,7 @@ require (
 	github.com/duke-git/lancet/v2 v2.3.6
 	github.com/mattn/go-isatty v0.0.20
 	github.com/orochaa/go-clack v0.1.18
-	github.com/sashabaranov/go-openai v1.36.0
+	github.com/sashabaranov/go-openai v1.40.1
 	github.com/spf13/cobra v1.8.1
 	github.com/thediveo/enumflag/v2 v2.0.7
 	github.com/tidwall/gjson v1.18.0
