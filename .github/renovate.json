@@ -10,9 +10,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Update _VERSION variables in workflows",
-      "fileMatch": [
-        "^\\.github/workflows/.*\\.ya?ml$"
+      "description": ["Update _VERSION variables in workflows"],
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?)( depName=(?<depName>.+))?( versioning=(?<versioning>[a-z-]+))?\\s*([A-Z0-9_]+_VERSION[ ]*:[ ]*)(?<currentValue>.*)\\s"
@@ -22,23 +22,27 @@
   ],
   "packageRules": [
     {
-      "description": "Automerge non-major updates",
+      "description": ["Automerge non-major updates"],
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
       "automergeStrategy": "rebase",
       "automergeType": "branch"
     },
     {
-      "description": "Use ci semantic type for some deps",
+      "description": ["Use ci semantic type for some deps"],
       "matchFileNames": [".github/workflows/**"],
       "semanticCommitType": "ci"
     },
     {
-      "description": "Update the Renovate GitHub action weekly with fix type",
+      "description": ["Update the Renovate GitHub action weekly with fix type"],
       "extends": [":semanticCommitType(fix)"],
-      "matchPackageNames": "renovatebot/github-action",
+      "matchPackageNames": ["renovatebot/github-action"],
       "semanticCommitType": "ci",
       "schedule": ["* 0-3 * * 1"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"]
     }
   ]
 }
