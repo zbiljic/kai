@@ -3,7 +3,7 @@ module github.com/zbiljic/kai
 go 1.23.3
 
 require (
-	github.com/Mist3rBru/go-clack v0.1.15
+	github.com/Mist3rBru/go-clack v0.1.18
 	github.com/carlmjohnson/requests v0.24.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/duke-git/lancet/v2 v2.3.6
