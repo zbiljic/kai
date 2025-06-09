@@ -61,6 +61,7 @@ var genFlags = genOptions{
 	Provider:       PhindProvider,
 	All:            false,
 	IncludeHistory: true,
+	Yes:            false,
 }
 
 func genAddFlags(cmd *cobra.Command) {
@@ -68,6 +69,7 @@ func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
 	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 	cmd.Flags().BoolVar(&genFlags.IncludeHistory, "history", true, "Include previous commit messages as examples")
+	cmd.Flags().BoolVarP(&genFlags.Yes, "yes", "y", false, "Run in non-interactive mode, automatically using the first generated commit message")
 }
 
 func init() {
@@ -81,12 +83,15 @@ type genOptions struct {
 	Provider       ProviderType
 	All            bool
 	IncludeHistory bool
+	Yes            bool
 }
 
 func genSetup(cmd *cobra.Command) (string, error) {
-	prompts.Intro(picocolors.BgCyan(picocolors.Black(fmt.Sprintf(" %s ", AppName))))
-	// in order to show custom error
-	injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
+	if !genFlags.Yes {
+		prompts.Intro(picocolors.BgCyan(picocolors.Black(fmt.Sprintf(" %s ", AppName))))
+		// in order to show custom error
+		injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
+	}
 
 	workDir, err := gitWorkingTreeDir(getWd())
 	if err != nil {
@@ -96,13 +101,18 @@ func genSetup(cmd *cobra.Command) (string, error) {
 }
 
 func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) {
-	detectingFilesSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-	detectingFilesSpinner.Start("Detecting staged files")
+	var detectingFilesSpinner *prompts.SpinnerController
+	if !genFlags.Yes {
+		detectingFilesSpinner = prompts.Spinner(prompts.SpinnerOptions{})
+		detectingFilesSpinner.Start("Detecting staged files")
+	}
 
 	// Check for staged files first
 	files, diff, err := gitDiffStaged(workDir)
 	if err != nil {
-		detectingFilesSpinner.Stop("Error detecting staged files", 1)
+		if !genFlags.Yes && detectingFilesSpinner != nil {
+			detectingFilesSpinner.Stop("Error detecting staged files", 1)
+		}
 		return nil, "", err
 	}
 
@@ -113,19 +123,25 @@ func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) 
 
 	if all {
 		if err := gitAddAll(workDir); err != nil {
-			detectingFilesSpinner.Stop("Error staging files", 1)
+			if !genFlags.Yes && detectingFilesSpinner != nil {
+				detectingFilesSpinner.Stop("Error staging files", 1)
+			}
 			return nil, "", err
 		}
 
 		// Get updated list of staged files after adding all
 		files, diff, err = gitDiffStaged(workDir)
 		if err != nil {
-			detectingFilesSpinner.Stop("Error detecting staged files", 1)
+			if !genFlags.Yes && detectingFilesSpinner != nil {
+				detectingFilesSpinner.Stop("Error detecting staged files", 1)
+			}
 			return nil, "", err
 		}
 
 		if len(files) == 0 {
-			detectingFilesSpinner.Stop("No changes detected to stage", 0)
+			if !genFlags.Yes && detectingFilesSpinner != nil {
+				detectingFilesSpinner.Stop("No changes detected to stage", 0)
+			}
 			return nil, "", errors.New("No changes detected to stage") //nolint:staticcheck
 		}
 	}
@@ -136,7 +152,9 @@ func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) 
 		strings.Join(files, "\n     "),
 	)
 
-	detectingFilesSpinner.Stop(detectedMessage, 0)
+	if !genFlags.Yes && detectingFilesSpinner != nil {
+		detectingFilesSpinner.Stop(detectedMessage, 0)
+	}
 	return files, diff, nil
 }
 
@@ -222,9 +240,12 @@ func genGetPreviousCommitsForStagedFiles(workDir string) ([]string, error) {
 }
 
 func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, workDir, diff string) ([]string, error) {
-	generateMessageSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-	generateMessageSpinner.Start("Generating commit message")
-	generateMessageSpinner.Message(fmt.Sprintf("Generating commit message with %s", aip.String()))
+	var generateMessageSpinner *prompts.SpinnerController
+	if !genFlags.Yes {
+		generateMessageSpinner = prompts.Spinner(prompts.SpinnerOptions{})
+		generateMessageSpinner.Start("Generating commit message")
+		generateMessageSpinner.Message(fmt.Sprintf("Generating commit message with %s", aip.String()))
+	}
 
 	var messages []string
 	var err error
@@ -245,7 +266,10 @@ func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, 
 		return nil, err
 	}
 
-	generateMessageSpinner.Stop("Changes analyzed", 0)
+	if !genFlags.Yes && generateMessageSpinner != nil {
+		generateMessageSpinner.Stop("Changes analyzed", 0)
+	}
+
 	return filterAndProcessMessages(messages)
 }
 
@@ -403,16 +427,34 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	message, err := genHandleMessageSelection(messages)
-	if err != nil || message == "" {
-		return err
+	var message string
+	if genFlags.Yes {
+		// In automatic mode, use the first message
+		if len(messages) > 0 {
+			message = messages[0]
+		}
+	} else {
+		// In interactive mode, let the user select a message
+		message, err = genHandleMessageSelection(messages)
+		if err != nil {
+			return err
+		}
+	}
+
+	if message == "" {
+		return errors.New("no commit message selected") //nolint:staticcheck
 	}
 
 	if err := gitCommit(workDir, message); err != nil {
 		return err
 	}
 
-	prompts.Outro(fmt.Sprintf("%s Successfully committed", picocolors.Green("✔")))
+	if !genFlags.Yes {
+		prompts.Outro(fmt.Sprintf("%s Successfully committed", picocolors.Green("✔")))
+	} else {
+		fmt.Printf("Successfully committed: %s\n", message)
+	}
+
 	return nil
 }
 
