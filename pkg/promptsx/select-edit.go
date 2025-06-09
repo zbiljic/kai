@@ -3,11 +3,11 @@ package promptsx
 import (
 	"fmt"
 
-	"github.com/Mist3rBru/go-clack/core"
-	"github.com/Mist3rBru/go-clack/core/validator"
-	"github.com/Mist3rBru/go-clack/prompts/symbols"
-	"github.com/Mist3rBru/go-clack/prompts/theme"
-	"github.com/Mist3rBru/go-clack/third_party/picocolors"
+	"github.com/orochaa/go-clack/core"
+	"github.com/orochaa/go-clack/core/validator"
+	"github.com/orochaa/go-clack/prompts/symbols"
+	"github.com/orochaa/go-clack/prompts/theme"
+	"github.com/orochaa/go-clack/third_party/picocolors"
 )
 
 type SelectEditParams[TValue comparable] struct {
@@ -74,7 +74,7 @@ func SelectEdit[TValue comparable](params SelectEditParams[TValue]) (EditableVal
 			}
 
 			return theme.ApplyTheme(theme.ThemeParams[EditableValue[TValue]]{
-				Ctx:             p.Prompt,
+				Context:         p.Prompt,
 				Message:         params.Message,
 				Value:           params.Options[p.CursorIndex].Label,
 				ValueWithCursor: value,

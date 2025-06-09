@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/Mist3rBru/go-clack/prompts"
+	"github.com/orochaa/go-clack/prompts"
 	"github.com/spf13/cobra"
 
 	"github.com/zbiljic/kai/internal/buildinfo"

@@ -3,9 +3,9 @@ package promptsx
 import (
 	"os"
 
-	"github.com/Mist3rBru/go-clack/core"
-	"github.com/Mist3rBru/go-clack/core/utils"
-	"github.com/Mist3rBru/go-clack/core/validator"
+	"github.com/orochaa/go-clack/core"
+	"github.com/orochaa/go-clack/core/utils"
+	"github.com/orochaa/go-clack/core/validator"
 )
 
 type EditableValue[TValue any] struct {
