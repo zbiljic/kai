@@ -7,11 +7,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Mist3rBru/go-clack/prompts"
-	"github.com/Mist3rBru/go-clack/third_party/picocolors"
 	"github.com/duke-git/lancet/v2/maputil"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/duke-git/lancet/v2/strutil"
+	"github.com/orochaa/go-clack/prompts"
+	"github.com/orochaa/go-clack/third_party/picocolors"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/enumflag/v2"
 

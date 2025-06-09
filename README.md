@@ -152,7 +152,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgements
 
 *   Inspired by other AI-powered commit tools and the need for a simple Go solution that allows easy message modification and robust LLM integration.
-*   Uses [go-clack](https://github.com/Mist3rBru/go-clack) for interactive prompts.
+*   Uses [go-clack](https://github.com/orochaa/go-clack) for interactive prompts.
 
 ## Similar Projects
 
