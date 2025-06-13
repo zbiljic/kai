@@ -30,7 +30,7 @@ var (
 var commitTypes = map[commit.Type]string{
 	commit.SimpleType: "",
 	commit.ConventionalType: fmt.Sprintf("%s\n%s",
-		"Choose a type from the type-to-description map below that best describes the git diff:",
-		mapToString(commit.ConventionalCommitTypes),
+		"Choose a type from the allowed types table below that best describes the git diff:",
+		mapToTable(commit.ConventionalCommitTypes),
 	),
 }
