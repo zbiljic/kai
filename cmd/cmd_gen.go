@@ -425,6 +425,11 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// set candidate count to 1 when yes flag is true
+	if genFlags.Yes {
+		genFlags.CandidateCount = 1
+	}
+
 	messages, err := genMessages(cmd.Context(), aip, genFlags.Type, workDir, diff)
 	if err != nil {
 		return err
