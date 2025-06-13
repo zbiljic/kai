@@ -16,5 +16,6 @@ type AIPrompt interface {
 	// Generate creates a new output string using the context,
 	// system prompt, and user prompt. Returns the generated
 	// string and an error if it fails.
-	Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error)
+	// The candidateCount parameter determines how many message candidates to generate.
+	Generate(ctx context.Context, systemPrompt, userPrompt string, candidateCount int) ([]string, error)
 }

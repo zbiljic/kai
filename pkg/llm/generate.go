@@ -68,10 +68,10 @@ func GenerateUserPromptWithPreviousCommits(t commit.Type, maxLength int, diff st
 	return strings.Join(content, "\n")
 }
 
-func GenerateCommitMessage(ctx context.Context, provider AIPrompt, commitType commit.Type, diff string) ([]string, error) {
+func GenerateCommitMessage(ctx context.Context, provider AIPrompt, commitType commit.Type, diff string, candidateCount int) ([]string, error) {
 	systemPrompt := GenerateSystemPrompt(commitType)
 	userPrompt := GenerateUserPrompt(commitType, commit.DefaultMaxLength, diff)
-	return provider.Generate(ctx, systemPrompt, userPrompt)
+	return provider.Generate(ctx, systemPrompt, userPrompt, candidateCount)
 }
 
 func GenerateCommitMessageWithPreviousCommits(
@@ -81,8 +81,9 @@ func GenerateCommitMessageWithPreviousCommits(
 	workDir,
 	diff string,
 	previousCommits []string,
+	candidateCount int,
 ) ([]string, error) {
 	systemPrompt := GenerateSystemPrompt(commitType)
 	userPrompt := GenerateUserPromptWithPreviousCommits(commitType, commit.DefaultMaxLength, diff, previousCommits)
-	return provider.Generate(ctx, systemPrompt, userPrompt)
+	return provider.Generate(ctx, systemPrompt, userPrompt, candidateCount)
 }

@@ -62,7 +62,7 @@ func (o *OpenRouter) IsAvailable() bool {
 	return os.Getenv("OPENROUTER_API_KEY") != ""
 }
 
-func (p *OpenRouter) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
+func (p *OpenRouter) Generate(ctx context.Context, systemPrompt, userPrompt string, candidateCount int) ([]string, error) {
 	if p.options.ApiKey == "" {
 		return nil, errors.New("OpenRouter API Key is not set")
 	}
@@ -85,7 +85,7 @@ func (p *OpenRouter) Generate(ctx context.Context, systemPrompt, userPrompt stri
 		PresencePenalty:  0,
 		MaxTokens:        1024,
 		Stream:           false,
-		N:                1,
+		N:                candidateCount,
 	}
 
 	var (

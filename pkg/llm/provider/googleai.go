@@ -75,7 +75,7 @@ func (o *GoogleAI) IsAvailable() bool {
 }
 
 // Generate sends a prompt to the Google AI API and returns the generated text.
-func (p *GoogleAI) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
+func (p *GoogleAI) Generate(ctx context.Context, systemPrompt, userPrompt string, candidateCount int) ([]string, error) {
 	if p.client == nil {
 		return nil, errors.New("client is not initialized")
 	}
@@ -90,7 +90,7 @@ func (p *GoogleAI) Generate(ctx context.Context, systemPrompt, userPrompt string
 					{Text: systemPrompt},
 				},
 			},
-			CandidateCount: 1,
+			CandidateCount: int32(candidateCount),
 		},
 	)
 	if err != nil {

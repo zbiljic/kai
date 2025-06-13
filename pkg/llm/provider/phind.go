@@ -56,7 +56,8 @@ func (p *Phind) IsAvailable() bool {
 	return true
 }
 
-func (p *Phind) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
+func (p *Phind) Generate(ctx context.Context, systemPrompt, userPrompt string, candidateCount int) ([]string, error) {
+	// Note: Phind doesn't support multiple candidates, but we'll keep the parameter for interface compatibility
 	prompt := ""
 	prompt += systemPrompt
 	prompt += "\n"

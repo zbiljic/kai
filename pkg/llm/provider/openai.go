@@ -62,7 +62,7 @@ func (o *OpenAI) IsAvailable() bool {
 	return os.Getenv("OPENAI_API_KEY") != ""
 }
 
-func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) ([]string, error) {
+func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string, candidateCount int) ([]string, error) {
 	if p.options.ApiKey == "" {
 		return nil, errors.New("OpenAI API Key is not set")
 	}
@@ -85,7 +85,7 @@ func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string) 
 		PresencePenalty:  0,
 		MaxTokens:        256,
 		Stream:           false,
-		N:                1,
+		N:                candidateCount,
 	}
 
 	var (

@@ -61,6 +61,7 @@ var genFlags = genOptions{
 	Provider:       PhindProvider,
 	All:            false,
 	IncludeHistory: true,
+	CandidateCount: 2,
 	Yes:            false,
 }
 
@@ -69,6 +70,7 @@ func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
 	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 	cmd.Flags().BoolVar(&genFlags.IncludeHistory, "history", true, "Include previous commit messages as examples")
+	cmd.Flags().IntVarP(&genFlags.CandidateCount, "count", "n", 2, "Number of commit message suggestions to generate")
 	cmd.Flags().BoolVarP(&genFlags.Yes, "yes", "y", false, "Run in non-interactive mode, automatically using the first generated commit message")
 }
 
@@ -83,6 +85,7 @@ type genOptions struct {
 	Provider       ProviderType
 	All            bool
 	IncludeHistory bool
+	CandidateCount int
 	Yes            bool
 }
 
@@ -256,10 +259,10 @@ func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, 
 		var previousCommits []string
 		previousCommits, err = genGetPreviousCommitsForStagedFiles(workDir)
 		if err == nil {
-			messages, err = llm.GenerateCommitMessageWithPreviousCommits(ctx, aip, commitType, workDir, diff, previousCommits)
+			messages, err = llm.GenerateCommitMessageWithPreviousCommits(ctx, aip, commitType, workDir, diff, previousCommits, genFlags.CandidateCount)
 		}
 	} else {
-		messages, err = llm.GenerateCommitMessage(ctx, aip, commitType, diff)
+		messages, err = llm.GenerateCommitMessage(ctx, aip, commitType, diff, genFlags.CandidateCount)
 	}
 
 	if err != nil {
