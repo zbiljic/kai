@@ -13,7 +13,7 @@ require (
 	github.com/thediveo/enumflag/v2 v2.0.7
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/sys v0.33.0
-	google.golang.org/genai v1.10.0
+	google.golang.org/genai v1.11.1
 )
 
 require (
