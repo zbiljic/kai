@@ -95,6 +95,12 @@ The `make install` command will compile the `kai` executable and place it in you
     ```
     Available providers: `phind` (default fallback), `openai`, `googleai`, `openrouter`.
 
+*   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
+    ```bash
+    kai gen --provider openai --model gpt-4
+    kai gen -p googleai -m gemini-2.5-pro
+    ```
+
 *   **Specify Commit Message Type**: Use the `--type` or `-t` flag to set the desired commit message format.
     ```bash
     kai gen --type simple
