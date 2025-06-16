@@ -59,6 +59,7 @@ var genCmd = &cobra.Command{
 var genFlags = genOptions{
 	Type:           commit.ConventionalType,
 	Provider:       PhindProvider,
+	Model:          "",
 	All:            false,
 	IncludeHistory: true,
 	CandidateCount: 2,
@@ -68,6 +69,7 @@ var genFlags = genOptions{
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
 	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
+	cmd.Flags().StringVarP(&genFlags.Model, "model", "m", "", "Specific model to use for the selected provider")
 	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 	cmd.Flags().BoolVar(&genFlags.IncludeHistory, "history", true, "Include previous commit messages as examples")
 	cmd.Flags().IntVarP(&genFlags.CandidateCount, "count", "n", 2, "Number of commit message suggestions to generate")
@@ -83,6 +85,7 @@ func init() {
 type genOptions struct {
 	Type           commit.Type
 	Provider       ProviderType
+	Model          string
 	All            bool
 	IncludeHistory bool
 	CandidateCount int
@@ -165,13 +168,21 @@ func genInitializeLLMProvider(cmd *cobra.Command, providerType ProviderType) (ll
 	if cmd.Flags().Changed("provider") {
 		switch providerType {
 		case OpenAIProvider:
-			return provider.NewOpenAIProvider(), nil
+			return provider.NewOpenAIProvider(provider.OpenAIOptions{
+				Model: genFlags.Model,
+			}), nil
 		case GoogleAIProvider:
-			return provider.NewGoogleAIProvider()
+			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
+				Model: genFlags.Model,
+			})
 		case OpenRouterProvider:
-			return provider.NewOpenRouterProvider(), nil
+			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
+				Model: genFlags.Model,
+			}), nil
 		case PhindProvider:
-			return provider.NewPhindProvider(), nil
+			return provider.NewPhindProvider(provider.PhindOptions{
+				Model: genFlags.Model,
+			}), nil
 		}
 	}
 
@@ -179,10 +190,26 @@ func genInitializeLLMProvider(cmd *cobra.Command, providerType ProviderType) (ll
 	providers := []struct {
 		create func() (llm.AIPrompt, error)
 	}{
-		{create: func() (llm.AIPrompt, error) { return provider.NewGoogleAIProvider() }},
-		{create: func() (llm.AIPrompt, error) { return provider.NewOpenRouterProvider(), nil }},
-		{create: func() (llm.AIPrompt, error) { return provider.NewOpenAIProvider(), nil }},
-		{create: func() (llm.AIPrompt, error) { return provider.NewPhindProvider(), nil }},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
+				Model: genFlags.Model,
+			})
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
+				Model: genFlags.Model,
+			}), nil
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewOpenAIProvider(provider.OpenAIOptions{
+				Model: genFlags.Model,
+			}), nil
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewPhindProvider(provider.PhindOptions{
+				Model: genFlags.Model,
+			}), nil
+		}},
 	}
 
 	for _, p := range providers {
