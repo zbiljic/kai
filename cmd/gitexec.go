@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/duke-git/lancet/v2/slice"
-	"github.com/zbiljic/kai/pkg/gitexec"
+	"github.com/zbiljic/gitexec"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 func gitWorkingTreeDir(path string) (string, error) {
 	out, err := gitexec.RevParse(&gitexec.RevParseOptions{
 		CmdDir:       path,
-		ShowTopLevel: true,
+		ShowToplevel: true,
 	})
 	if err != nil {
 		return string(out), err

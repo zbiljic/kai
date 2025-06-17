@@ -12,7 +12,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/thediveo/enumflag/v2 v2.0.7
 	github.com/tidwall/gjson v1.18.0
-	golang.org/x/sys v0.33.0
+	github.com/zbiljic/gitexec v0.0.0-20250617135400-2b148a5e27b8
 	google.golang.org/genai v1.11.1
 )
 
@@ -40,6 +40,7 @@ require (
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
 	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
