@@ -115,6 +115,43 @@ The `make install` command will compile the `kai` executable and place it in you
     kai gen --history=false
     ```
 
+*   **Number of Suggestions**: Use the `--count` or `-n` flag to specify how many commit message suggestions to generate (default is 2).
+    ```bash
+    kai gen --count 5
+    ```
+
+*   **Non-interactive Mode**: Use the `--yes` or `-y` flag to automatically use the first generated commit message without an interactive prompt.
+    ```bash
+    kai gen --yes
+    ```
+
+### `absorb` Command
+
+The `absorb` command helps you automatically create `fixup!` commits for staged changes, targeting the original commits that introduced those changes. This is useful for splitting out and organizing your work.
+
+```bash
+kai absorb [options]
+```
+
+After running `kai absorb`, you can execute `git rebase -i --autosquash` to automatically squash the `fixup!` commits into their respective targets.
+
+*   **Automatically Rebase**: Use `--and-rebase` or `-r` to automatically run `git rebase --autosquash` after creating fixups.
+    ```bash
+    kai absorb --and-rebase
+    ```
+*   **Dry Run**: Use `--dry-run` or `-n` to see what changes `absorb` would make without actually performing them.
+    ```bash
+    kai absorb --dry-run
+    ```
+*   **Backup Branch**: When using `--and-rebase`, use `--backup` or `-b` to create a backup branch before the rebase operation. This helps in recovery if the rebase fails or does not produce expected results.
+    ```bash
+    kai absorb --and-rebase --backup
+    ```
+*   **Stage All Changes**: Use `--all` or `-a` to automatically stage all changes in tracked files before analyzing for fixups.
+    ```bash
+    kai absorb --all
+    ```
+
 ## ⚙️ Configuration
 
 `kai` relies on environment variables for API keys to access LLM providers.
