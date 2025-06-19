@@ -31,12 +31,14 @@ If --and-rebase is specified, the rebase will be run automatically.`,
 var absorbFlags = absorbOptions{
 	AndRebase: false,
 	DryRun:    false,
+	Backup:    false,
 	All:       false,
 }
 
 func absorbAddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&absorbFlags.AndRebase, "and-rebase", "r", false, "Automatically run 'git rebase --autosquash' after creating fixups")
 	cmd.Flags().BoolVarP(&absorbFlags.DryRun, "dry-run", "n", false, "Don't make any actual changes")
+	cmd.Flags().BoolVarP(&absorbFlags.Backup, "backup", "b", false, "Create a backup branch before rebasing")
 	cmd.Flags().BoolVarP(&absorbFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 }
 
@@ -49,6 +51,7 @@ func init() {
 type absorbOptions struct {
 	AndRebase bool
 	DryRun    bool
+	Backup    bool
 	All       bool
 }
 
@@ -208,6 +211,19 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 		if absorbFlags.DryRun {
 			promptsx.InfoNoSplitLines("Would run: " + rebaseCmdString)
 		} else {
+			var backupBranch string
+			var err error
+
+			// Create a backup branch if --backup is set
+			if absorbFlags.Backup {
+				backupBranch, err = gitCreateBackupBranch(workDir)
+				if err != nil {
+					return fmt.Errorf("failed to create backup branch: %w", err)
+				}
+
+				prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+			}
+
 			prompts.Info("Running 'git rebase --autosquash'...")
 
 			if baseCommit == "" {
@@ -221,10 +237,23 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 
 			if err := gitRebaseAutosquash(workDir, baseCommit); err != nil {
 				promptsx.ErrorNoSplitLines("Rebase failed: " + rebaseCmdString)
+
+				// Provide instructions to restore from backup if one was created
+				if absorbFlags.Backup && backupBranch != "" {
+					errMsg := fmt.Sprintf("%s Rebase failed. To restore your original branch, run:\n    git checkout -f %s",
+						picocolors.Red("✖"), backupBranch)
+					return fmt.Errorf("%s\n%s", err, errMsg)
+				}
+
 				return fmt.Errorf("rebase failed: %w", err)
 			}
 
-			prompts.Outro(fmt.Sprintf("%s Rebase completed successfully", picocolors.Green("✔")))
+			if absorbFlags.Backup && backupBranch != "" {
+				prompts.Outro(fmt.Sprintf("%s Rebase completed successfully. Backup branch: %s",
+					picocolors.Green("✔"), backupBranch))
+			} else {
+				prompts.Outro(fmt.Sprintf("%s Rebase completed successfully", picocolors.Green("✔")))
+			}
 		}
 	} else if !absorbFlags.DryRun {
 		promptsx.Note("Run 'git rebase --autosquash -i' to apply the fixup commits")

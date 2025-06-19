@@ -377,3 +377,29 @@ func gitRebaseAutosquash(workDir, upstream string) error {
 	_, err := gitexec.Rebase(opts)
 	return err
 }
+
+// gitCreateBackupBranch creates a backup branch with the current branch's state.
+// The branch name will be in the format: backup/<original_branch_name>-HH-MM-SS
+func gitCreateBackupBranch(workDir string) (string, error) {
+	// Get current branch name
+	currentBranch, err := gitCurrentBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to get current branch name: %w", err)
+	}
+
+	// Generate timestamp in HH-MM-SS format
+	timeStr := time.Now().Format("15-04-05")
+	backupBranchName := fmt.Sprintf("backup/%s-%s", currentBranch, timeStr)
+
+	// Create a new branch pointing to the current HEAD
+	_, err = gitexec.Branch(&gitexec.BranchOptions{
+		CmdDir:     workDir,
+		Branchname: backupBranchName,
+		Force:      true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup branch: %w", err)
+	}
+
+	return backupBranchName, nil
+}
