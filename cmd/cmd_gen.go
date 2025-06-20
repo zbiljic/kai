@@ -17,31 +17,8 @@ import (
 
 	"github.com/zbiljic/kai/pkg/commit"
 	"github.com/zbiljic/kai/pkg/llm"
-	"github.com/zbiljic/kai/pkg/llm/provider"
 	"github.com/zbiljic/kai/pkg/promptsx"
 )
-
-// ProviderType represents the supported LLM providers.
-type ProviderType enumflag.Flag
-
-const (
-	// PhindProvider represents the Phind provider.
-	PhindProvider ProviderType = iota
-	// OpenAIProvider represents the OpenAI provider.
-	OpenAIProvider
-	// GoogleAIProvider represents the GoogleAI provider.
-	GoogleAIProvider
-	// OpenRouterProvider represents the OpenRouter provider.
-	OpenRouterProvider
-)
-
-// ProviderIds maps ProviderType to their string representations.
-var ProviderIds = map[ProviderType][]string{
-	PhindProvider:      {"phind"},
-	OpenAIProvider:     {"openai"},
-	GoogleAIProvider:   {"googleai"},
-	OpenRouterProvider: {"openrouter"},
-}
 
 var genCmd = &cobra.Command{
 	Use: "gen",
@@ -92,13 +69,17 @@ type genOptions struct {
 	Yes            bool
 }
 
+// genSetupCommandClackIntro sets up clack intro and injects into command context
+func genSetupCommandClackIntro(cmd *cobra.Command) {
+	prompts.Intro(picocolors.BgCyan(picocolors.Black(fmt.Sprintf(" %s ", AppName))))
+	// in order to show custom error
+	injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
+}
+
 func genSetup(cmd *cobra.Command) (string, error) {
 	if !genFlags.Yes {
-		prompts.Intro(picocolors.BgCyan(picocolors.Black(fmt.Sprintf(" %s ", AppName))))
-		// in order to show custom error
-		injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
+		genSetupCommandClackIntro(cmd)
 	}
-
 	return setupGitWorkDir()
 }
 
@@ -158,67 +139,6 @@ func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) 
 		detectingFilesSpinner.Stop(detectedMessage, 0)
 	}
 	return files, diff, nil
-}
-
-func genInitializeLLMProvider(cmd *cobra.Command, providerType ProviderType) (llm.AIPrompt, error) {
-	if cmd.Flags().Changed("provider") {
-		switch providerType {
-		case OpenAIProvider:
-			return provider.NewOpenAIProvider(provider.OpenAIOptions{
-				Model: genFlags.Model,
-			}), nil
-		case GoogleAIProvider:
-			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
-				Model: genFlags.Model,
-			})
-		case OpenRouterProvider:
-			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
-				Model: genFlags.Model,
-			}), nil
-		case PhindProvider:
-			return provider.NewPhindProvider(provider.PhindOptions{
-				Model: genFlags.Model,
-			}), nil
-		}
-	}
-
-	// Try providers in preferred order
-	providers := []struct {
-		create func() (llm.AIPrompt, error)
-	}{
-		{create: func() (llm.AIPrompt, error) {
-			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
-				Model: genFlags.Model,
-			})
-		}},
-		{create: func() (llm.AIPrompt, error) {
-			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
-				Model: genFlags.Model,
-			}), nil
-		}},
-		{create: func() (llm.AIPrompt, error) {
-			return provider.NewOpenAIProvider(provider.OpenAIOptions{
-				Model: genFlags.Model,
-			}), nil
-		}},
-		{create: func() (llm.AIPrompt, error) {
-			return provider.NewPhindProvider(provider.PhindOptions{
-				Model: genFlags.Model,
-			}), nil
-		}},
-	}
-
-	for _, p := range providers {
-		provider, err := p.create()
-		if err != nil {
-			continue
-		}
-		if provider.IsAvailable() {
-			return provider, nil
-		}
-	}
-
-	return nil, errors.New("no available LLM providers found - please configure at least one provider's API key")
 }
 
 // genGetPreviousCommitsForStagedFiles returns previous commit messages for all staged files.
@@ -443,7 +363,7 @@ func runGenE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	aip, err := genInitializeLLMProvider(cmd, genFlags.Provider)
+	aip, err := initializeLLMProvider(cmd.Flags().Changed("provider"), genFlags.Provider, genFlags.Model)
 	if err != nil {
 		return err
 	}
