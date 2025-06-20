@@ -86,19 +86,23 @@ test: tools
 test: ## Run the test suite and/or any other tests
 	CGO_ENABLED=1 $(if $(ENABLE_RACE),GORACE="strip_path_prefix=$(GOPATH)/src") \
 		mise x -- gotestsum \
-		--junitfile=junit.unit.xml \
+		--junitfile=coverage.junit.unit.xml \
 		--junitfile-project-name=$(PROJECT_NAME) \
 		-- \
 		$(if $(ENABLE_RACE),-race) $(if $(VERBOSE),-v) \
 		-cover \
-		-coverprofile=unit.cover \
+		-coverprofile=unit.coverprofile \
 		$(if $(ENABLE_RACE),-covermode=atomic,-covermode=count) \
 		-timeout=15m \
 		./...
 
 .PHONY: coverage
 coverage: ## Open a web browser displaying coverage
-	go tool cover -html=unit.cover
+	go tool cover -html=unit.coverprofile
+
+.PHONY: coverage-total
+coverage-total: ## Print total coverage percentage
+	@go tool cover -func unit.coverprofile | grep total | awk '{ printf "total coverage: %s of statements\n", $$3 }'
 
 .PHONY: compile
 compile: # Compiles the packages but discards the resulting object, serving only as a check that the packages can be built
@@ -145,11 +149,11 @@ nightly: tools
 build: lint test package
 
 .PHONY: pre-commit
-pre-commit: lint test
+pre-commit: gofmt lint test
 
 .PHONY: clean
 clean: ## Remove build artifacts
 	@echo "==> Removing build artifacts..."
-	@rm -f $(if $(VERBOSE),-v) *.cover coverage.xml junit.*.xml
+	@rm -f $(if $(VERBOSE),-v) *.out coverage.* *.coverprofile profile.cov
 	@rm -f $(if $(VERBOSE),-v) "$(GOPATH)/bin/$(PROJECT_NAME)"
 	@rm -rf $(if $(VERBOSE),-v) "$(PROJECT_ROOT)/dist/"
