@@ -99,11 +99,7 @@ func genSetup(cmd *cobra.Command) (string, error) {
 		injectIntoCommandContextWithKey(cmd, ctxKeyClackPromptStarted{}, true)
 	}
 
-	workDir, err := gitWorkingTreeDir(getWd())
-	if err != nil {
-		return "", errors.New("The current directory must be a Git repository") //nolint:staticcheck
-	}
-	return workDir, nil
+	return setupGitWorkDir()
 }
 
 func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) {

@@ -56,11 +56,7 @@ type absorbOptions struct {
 }
 
 func absorbSetup(cmd *cobra.Command) (string, error) {
-	workDir, err := gitWorkingTreeDir(getWd())
-	if err != nil {
-		return "", errors.New("The current directory must be a Git repository") //nolint:staticcheck
-	}
-	return workDir, nil
+	return setupGitWorkDir()
 }
 
 func absorbDetectAndStageFiles(workDir string, all bool) ([]string, error) {
