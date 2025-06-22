@@ -403,3 +403,69 @@ func gitCreateBackupBranch(workDir string) (string, error) {
 
 	return backupBranchName, nil
 }
+
+// gitGetCommitsBetweenBranches returns commits between current branch and base branch
+func gitGetCommitsBetweenBranches(workDir, baseBranch string) (string, error) {
+	opts := &gitexec.LogOptions{
+		CmdDir: workDir,
+		Paths:  fmt.Sprintf("%s..HEAD", baseBranch),
+		Format: "%H%n%an%n%s%n%b%n---COMMIT---",
+	}
+
+	output, err := gitexec.Log(opts)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
+// gitGetDiffBetweenBranches returns the diff between current branch and base branch
+func gitGetDiffBetweenBranches(workDir, baseBranch string) (string, error) {
+	opts := &gitexec.DiffOptions{
+		CmdDir:  workDir,
+		Minimal: true,
+		Commit:  baseBranch,
+		Path:    excludeFromDiff,
+	}
+
+	output, err := gitexec.Diff(opts)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
+// gitBranchExists checks if a branch exists
+func gitBranchExists(workDir, branchName string) bool {
+	opts := &gitexec.BranchOptions{
+		CmdDir:  workDir,
+		List:    true,
+		Pattern: []string{branchName},
+	}
+
+	output, err := gitexec.Branch(opts)
+	if err != nil {
+		return false
+	}
+
+	return strings.TrimSpace(string(output)) != ""
+}
+
+// gitRemoteBranchExists checks if a remote branch exists
+func gitRemoteBranchExists(workDir, branchName string) bool {
+	opts := &gitexec.BranchOptions{
+		CmdDir:  workDir,
+		Remotes: true,
+		List:    true,
+		Pattern: []string{"*/" + branchName},
+	}
+
+	output, err := gitexec.Branch(opts)
+	if err != nil {
+		return false
+	}
+
+	return strings.TrimSpace(string(output)) != ""
+}
