@@ -41,6 +41,7 @@ func prgenAddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&prgenFlags.Model, "model", "m", "", "Specific model to use for the selected provider")
 	cmd.Flags().StringVarP(&prgenFlags.BaseBranch, "base", "b", "main", "Base branch to compare against")
 	cmd.Flags().IntVar(&prgenFlags.MaxDiffSize, "max-diff", 10000, "Maximum size of diff to send to LLM (in characters)")
+	cmd.Flags().BoolVar(&prgenFlags.NoContext, "no-context", false, "Skip prompting for additional context about changes")
 }
 
 func init() {
@@ -54,6 +55,7 @@ type prgenOptions struct {
 	Model       string
 	BaseBranch  string
 	MaxDiffSize int
+	NoContext   bool
 }
 
 // prgenSetupCommandClackIntro sets up clack intro and injects into command context
@@ -95,6 +97,7 @@ func prgenGeneratePRContent(
 	baseBranch,
 	commits,
 	diff,
+	prContext,
 	prTemplate string,
 ) (string, string, error) {
 	// Create a spinner to show progress
@@ -110,7 +113,7 @@ func prgenGeneratePRContent(
 		baseBranch,
 		commits,
 		diff,
-		"",
+		prContext,
 		prTemplate,
 		prgenFlags.MaxDiffSize,
 	)
@@ -149,6 +152,18 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 			prgenFlags.BaseBranch = "origin/" + prgenFlags.BaseBranch
 		} else {
 			return fmt.Errorf("base branch '%s' does not exist locally or remotely", prgenFlags.BaseBranch)
+		}
+	}
+
+	// Ask for additional context about the changes if not disabled
+	prContext := ""
+	if !prgenFlags.NoContext {
+		prContext, err = prompts.Text(prompts.TextParams{
+			Message:     "Provide additional context about changes",
+			Placeholder: "<optional context>",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get additional context: %w", err)
 		}
 	}
 
@@ -213,6 +228,7 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 		prgenFlags.BaseBranch,
 		commits,
 		diff,
+		prContext,
 		prTemplate,
 	)
 	if err != nil {
