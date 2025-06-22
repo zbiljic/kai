@@ -96,13 +96,21 @@ test: ## Run the test suite and/or any other tests
 		-timeout=15m \
 		./...
 
+unit.coverprofile: # rule to ensure unit.coverprofile exists
+	@if [ ! -f $@ ]; then \
+		echo "No coverage file found. Running tests to generate coverage data..."; \
+		$(MAKE) test; \
+	fi
+
 .PHONY: coverage
+coverage: unit.coverprofile
 coverage: ## Open a web browser displaying coverage
-	go tool cover -html=unit.coverprofile
+	go tool cover -html=$<
 
 .PHONY: coverage-total
+coverage-total: unit.coverprofile
 coverage-total: ## Print total coverage percentage
-	@go tool cover -func unit.coverprofile | grep total | awk '{ printf "total coverage: %s of statements\n", $$3 }'
+	@go tool cover -func $< | grep total | awk '{ printf "total coverage: %s of statements\n", $$3 }'
 
 .PHONY: compile
 compile: # Compiles the packages but discards the resulting object, serving only as a check that the packages can be built
