@@ -3,12 +3,13 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/zbiljic/kai)](https://goreportcard.com/report/github.com/zbiljic/kai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`kai` is a command-line interface (CLI) tool that leverages Artificial Intelligence to automatically generate Git commit messages based on your staged changes. It aims to streamline your commit workflow by providing concise, relevant, and optionally Conventional Commit-formatted messages, allowing you to focus more on coding and less on crafting perfect commit messages.
+`kai` is a command-line interface (CLI) tool that leverages Artificial Intelligence to automatically generate Git commit messages and pull request content. It aims to streamline your development workflow by providing concise, relevant, and optionally Conventional Commit-formatted messages, allowing you to focus more on coding and less on crafting perfect commit messages.
 
 ## ✨ Features
 
-*   **AI-Powered Generation**: Automatically creates commit messages by analyzing the diff of your staged Git changes.
-*   **Conventional Commits Support**: Generates messages adhering to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification (e.g., `feat(scope): add new feature`).
+*   **AI-Powered Commit Message Generation**: Automatically creates commit messages by analyzing the diff of your staged Git changes.
+*   **AI-Powered Pull Request Content Generation**: Generates titles and descriptions for pull requests by analyzing commits and diffs between branches.
+*   **Conventional Commits Support**: Generates commit messages adhering to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification (e.g., `feat(scope): add new feature`).
 *   **Interactive Workflow**: Provides a selection of generated messages and allows interactive editing before committing. You can also quickly select an option by typing its corresponding number.
 *   **Intelligent Provider Selection**: Automatically detects and prioritizes available LLM providers based on configured API keys, falling back to others if a preferred one isn't configured.
 *   **Automatic Staging**: If no files are staged, `kai` can automatically stage all changes in tracked files before generating a message.
@@ -49,6 +50,10 @@ The `make install` command will compile the `kai` executable and place it in you
 
 `kai` is designed to be used within a Git repository.
 
+### Generate Commit Message (`gen`)
+
+This command generates Git commit messages based on your staged changes.
+
 1.  **Stage your changes (or let `kai` do it):**
     Before running `kai`, you usually stage your changes:
     ```bash
@@ -86,7 +91,7 @@ The `make install` command will compile the `kai` executable and place it in you
 
 3.  **Commit**: Once you select or confirm a message, `kai` will automatically commit your staged changes with the chosen message.
 
-### Options
+#### `gen` Options
 
 *   **Specify LLM Provider**: Use the `--provider` or `-p` flag to explicitly choose your desired LLM provider, overriding the automatic detection.
     ```bash
@@ -123,6 +128,64 @@ The `make install` command will compile the `kai` executable and place it in you
 *   **Non-interactive Mode**: Use the `--yes` or `-y` flag to automatically use the first generated commit message without an interactive prompt.
     ```bash
     kai gen --yes
+    ```
+
+### Generate Pull Request Content (`prgen`)
+
+The `prgen` command helps you automatically generate a title and description for your pull request (PR) or merge request (MR) by analyzing the commits and changes between your current branch and a specified base branch.
+
+```bash
+kai prgen [options]
+# or
+kai pr [options]
+```
+
+To use it:
+
+1.  **Switch to your feature branch**: Ensure you are on the branch for which you want to create a PR.
+    ```bash
+    git checkout feature/my-new-feature
+    ```
+2.  **Run `kai prgen`**:
+    ```bash
+    kai prgen
+    ```
+    `kai` will then:
+    *   Compare your current branch with the default base branch (`main`).
+    *   Optionally ask for additional context about your changes.
+    *   Attempt to find and use a PR template in your repository.
+    *   Generate a PR title and description based on the commits and diff.
+    *   Display the generated content directly in your terminal.
+
+#### `prgen` Options
+
+*   **Specify LLM Provider**: Use the `--provider` or `-p` flag to explicitly choose your desired LLM provider, overriding the automatic detection.
+    ```bash
+    kai prgen --provider openai
+    kai prgen -p googleai
+    ```
+    Available providers: `phind` (default fallback), `openai`, `googleai`, `openrouter`.
+
+*   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
+    ```bash
+    kai prgen --provider openai --model gpt-4-turbo
+    kai prgen -p googleai -m gemini-pro
+    ```
+
+*   **Specify Base Branch**: Use the `--base` or `-b` flag to compare against a branch other than `main`.
+    ```bash
+    kai prgen --base develop
+    ```
+
+*   **Maximum Diff Size**: Use `--max-diff` to set a limit (in characters) on the size of the code diff sent to the LLM. Larger diffs consume more tokens and might be truncated by some models.
+    ```bash
+    kai prgen --max-diff 5000
+    ```
+    The default is 10000 characters.
+
+*   **No Additional Context Prompt**: Use `--no-context` to skip the interactive prompt for additional business or feature context. The AI will rely solely on the commit messages and code diff.
+    ```bash
+    kai prgen --no-context
     ```
 
 ### `absorb` Command
@@ -203,3 +266,4 @@ Here are some other similar projects that you might find useful:
 
 *   [aicommits](https://github.com/Nutlope/aicommits): A CLI that writes your Git commit messages for you with AI. (TypeScript)
 *   [lumen](https://github.com/jnsahaj/lumen): Instant AI Git Commit message, Git changes summary from the CLI. (Rust)
+*   [prghost](https://github.com/fyvfyv/prghost): Tool that auto-generates PR descriptions from git diffs using AI and project guidelines. (TypeScript)
