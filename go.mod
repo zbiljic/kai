@@ -14,7 +14,7 @@ require (
 	github.com/thediveo/enumflag/v2 v2.0.7
 	github.com/tidwall/gjson v1.18.0
 	github.com/zbiljic/gitexec v0.0.0-20250617135400-2b148a5e27b8
-	google.golang.org/genai v1.11.1
+	google.golang.org/genai v1.12.0
 )
 
 require (
