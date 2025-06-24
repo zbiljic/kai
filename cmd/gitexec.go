@@ -185,25 +185,17 @@ func gitPreviousCommitMessages(workDir string, files []string, maxCommits int) (
 		return nil, nil
 	}
 
-	// Split by newlines and deduplicate
+	// Split by newlines and filter out empty messages
 	messages := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-	// Deduplicate messages
-	seen := make(map[string]struct{})
-	var deduped []string
+	var result []string
 
 	for _, msg := range messages {
-		if msg == "" {
-			continue
-		}
-
-		if _, exists := seen[msg]; !exists {
-			seen[msg] = struct{}{}
-			deduped = append(deduped, msg)
+		if msg != "" {
+			result = append(result, msg)
 		}
 	}
 
-	return deduped, nil
+	return result, nil
 }
 
 // gitLastCommitForFile returns the last commit hash that modified the given file.
