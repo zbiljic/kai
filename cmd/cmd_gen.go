@@ -18,6 +18,7 @@ import (
 	"github.com/zbiljic/kai/pkg/commit"
 	"github.com/zbiljic/kai/pkg/llm"
 	"github.com/zbiljic/kai/pkg/promptsx"
+	"github.com/zbiljic/kai/pkg/termio"
 )
 
 var genCmd = &cobra.Command{
@@ -214,6 +215,9 @@ func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, 
 
 	if !genFlags.Yes && generateMessageSpinner != nil {
 		generateMessageSpinner.Stop("Changes analyzed", 0)
+		// Clear any pending input from stdin immediately after stopping the spinner
+		// This prevents buffered keystrokes (like Enter) from being consumed by the selection prompt
+		termio.ClearStdinBuffer()
 	}
 
 	return filterAndProcessMessages(messages)
