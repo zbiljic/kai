@@ -142,9 +142,9 @@ func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) 
 	return files, diff, nil
 }
 
-// genGetPreviousCommitsForStagedFiles returns previous commit messages for all staged files.
+// genGetPreviousCommitsForStagedFiles returns previous commit messages for all
+// staged files.
 func genGetPreviousCommitsForStagedFiles(workDir string) ([]string, error) {
-	// Get staged files
 	stagedFiles, err := gitStagedFiles(workDir)
 	if err != nil {
 		return nil, err
@@ -199,7 +199,6 @@ func genMessages(ctx context.Context, aip llm.AIPrompt, commitType commit.Type, 
 
 	// Decide whether to include commit history based on the flag
 	if genFlags.IncludeHistory {
-		// Get previous commit messages for staged files
 		var previousCommits []string
 		previousCommits, err = genGetPreviousCommitsForStagedFiles(workDir)
 		if err == nil {
@@ -306,7 +305,6 @@ func genEditCommitMessage(message string, commitType commit.Type) (string, error
 						}
 					})...)
 
-				// sort options
 				sort.Slice(options, func(i, j int) bool {
 					return options[i].Label < options[j].Label
 				})

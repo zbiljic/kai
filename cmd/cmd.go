@@ -16,7 +16,6 @@ var isNotTerminal = os.Getenv("TERM") == "dumb" ||
 	(!isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()))
 
 func init() {
-	// if the output is not directed to a terminal return an error
 	if isNotTerminal {
 		cobra.CheckErr(errors.New("not a terminal"))
 	}

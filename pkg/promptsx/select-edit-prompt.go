@@ -43,7 +43,6 @@ func NewSelectEditPrompt[TValue any](params SelectEditPromptParams[TValue]) *Sel
 
 	for _, option := range params.Options {
 		if value, ok := any(option.Value).(string); ok && value == "" {
-			// option.Value = any(option.Key).(TValue)
 			option.Value = any(option.Label).(TValue)
 		}
 	}
@@ -57,7 +56,6 @@ func NewSelectEditPrompt[TValue any](params SelectEditPromptParams[TValue]) *Sel
 		Prompt: *core.NewPrompt(core.PromptParams[EditableValue[TValue]]{
 			Input:  params.Input,
 			Output: params.Output,
-			// InitialValue: params.Options[startIndex].Value,
 			InitialValue: EditableValue[TValue]{
 				Value: params.Options[startIndex].Value,
 			},
@@ -79,7 +77,6 @@ func (p *SelectEditPrompt[TValue]) handleKeyPress(key *core.Key) {
 	for i, option := range p.Options {
 		if key.Name == core.KeyName(option.Key) {
 			p.State = core.SubmitState
-			// p.Value = option.Value
 			p.Value = EditableValue[TValue]{
 				Value: option.Value,
 				Edit:  false,
@@ -94,7 +91,6 @@ func (p *SelectEditPrompt[TValue]) handleKeyPress(key *core.Key) {
 		for i, option := range p.Options {
 			if i == p.CursorIndex {
 				p.State = core.SubmitState
-				// p.Value = option.Value
 				p.Value = EditableValue[TValue]{
 					Value: option.Value,
 					Edit:  true,
@@ -116,7 +112,6 @@ func (p *SelectEditPrompt[TValue]) handleKeyPress(key *core.Key) {
 	}
 
 	if p.CursorIndex >= 0 && p.CursorIndex < len(p.Options) {
-		// p.Value = p.Options[p.CursorIndex].Value
 		p.Value = EditableValue[TValue]{
 			Value: p.Options[p.CursorIndex].Value,
 		}

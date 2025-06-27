@@ -100,12 +100,10 @@ func prgenGeneratePRContent(
 	prContext,
 	prTemplate string,
 ) (string, string, error) {
-	// Create a spinner to show progress
 	generatePRSpinner := prompts.Spinner(prompts.SpinnerOptions{})
 	generatePRSpinner.Start("Generating PR content")
 	generatePRSpinner.Message(fmt.Sprintf("Analyzing changes with %s", aip.String()))
 
-	// Generate PR content
 	title, description, err := llm.GeneratePRContent(
 		ctx,
 		aip,
@@ -132,7 +130,6 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get current branch
 	currentBranch, err := gitCurrentBranch(workDir)
 	if err != nil {
 		return fmt.Errorf("failed to get current branch: %w", err)
@@ -148,7 +145,6 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 	if !baseBranchExists {
 		// Check if it exists as a remote branch
 		if gitRemoteBranchExists(workDir, prgenFlags.BaseBranch) {
-			// Try to use the remote branch
 			prgenFlags.BaseBranch = "origin/" + prgenFlags.BaseBranch
 		} else {
 			return fmt.Errorf("base branch '%s' does not exist locally or remotely", prgenFlags.BaseBranch)
@@ -178,11 +174,9 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 		prompts.Info(fmt.Sprintf("Using PR template: %s", picocolors.Cyan(fileRelPath)))
 	}
 
-	// Create a spinner for commit fetching
 	fetchingSpinner := prompts.Spinner(prompts.SpinnerOptions{})
 	fetchingSpinner.Start("Fetching commits between branches")
 
-	// Get commits between branches
 	commits, err := gitGetCommitsBetweenBranches(workDir, prgenFlags.BaseBranch)
 	if err != nil {
 		fetchingSpinner.Stop("Failed to get commits", 1)
@@ -194,10 +188,8 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no commits found between %s and %s", prgenFlags.BaseBranch, currentBranch)
 	}
 
-	// Update spinner for diff fetching
 	fetchingSpinner.Message("Fetching code diff between branches")
 
-	// Get diff between branches
 	diff, err := gitGetDiffBetweenBranches(workDir, prgenFlags.BaseBranch)
 	if err != nil {
 		fetchingSpinner.Stop("Failed to get diff", 1)
@@ -206,11 +198,9 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 
 	fetchingSpinner.Stop(fmt.Sprintf("Found %d commits and %d bytes of diff", strings.Count(commits, "---COMMIT---"), len(diff)), 0)
 
-	// Create a spinner for LLM initialization
 	providerSpinner := prompts.Spinner(prompts.SpinnerOptions{})
 	providerSpinner.Start("Initializing LLM provider")
 
-	// Initialize LLM provider
 	aip, err := initializeLLMProvider(cmd.Flags().Changed("provider"), prgenFlags.Provider, prgenFlags.Model)
 	if err != nil {
 		providerSpinner.Stop("Failed to initialize LLM provider", 1)
@@ -219,7 +209,6 @@ func runPrGenE(cmd *cobra.Command, args []string) error {
 
 	providerSpinner.Stop(fmt.Sprintf("Using %s", aip.String()), 0)
 
-	// Generate PR title and description
 	title, description, err := prgenGeneratePRContent(
 		cmd.Context(),
 		aip,

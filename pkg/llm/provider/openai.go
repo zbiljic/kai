@@ -115,12 +115,10 @@ func (p *OpenAI) Generate(ctx context.Context, systemPrompt, userPrompt string, 
 		return nil, errors.New("no completion choice available")
 	}
 
-	// extract messages
 	messages := slice.Map(respContent.Choices, func(_ int, s openai.ChatCompletionChoice) string {
 		return s.Message.Content
 	})
 
-	// remove duplicates
 	messages = slice.Unique(messages)
 
 	return messages, nil

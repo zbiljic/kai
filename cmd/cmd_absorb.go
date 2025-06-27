@@ -60,15 +60,12 @@ func absorbSetup(cmd *cobra.Command) (string, error) {
 }
 
 func absorbDetectAndStageFiles(workDir string, all bool) ([]string, error) {
-	// Check for staged files first
 	files, err := gitStagedFiles(workDir)
 	if err != nil {
 		return nil, err
 	}
 
-	// If no files are staged, automatically set All flag to true
 	if len(files) == 0 {
-		// except in dry-run mode, where we get unstaged files
 		if absorbFlags.DryRun {
 			files, err = gitUnstagedFiles(workDir)
 			if err != nil {
@@ -94,7 +91,6 @@ func absorbDetectAndStageFiles(workDir string, all bool) ([]string, error) {
 				return nil, fmt.Errorf("failed to stage all changes: %w", err)
 			}
 
-			// Get updated list of staged files after adding all
 			files, err = gitStagedFiles(workDir)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get staged files: %w", err)
@@ -133,7 +129,6 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 	stagedFiles, err := absorbDetectAndStageFiles(workDir, absorbFlags.All)
 	if err != nil {
 		if absorbFlags.DryRun {
-			// In dry-run mode, just show a note and continue
 			promptsx.Note(err.Error())
 			return nil
 		}
@@ -150,12 +145,10 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to get last commit for %s: %w", file, err)
 		}
 
-		// Skip if we couldn't find a commit or if it's the working copy
 		if commitHash == "" || commitHash == "0000000000000000000000000000000000000000" {
 			continue
 		}
 
-		// Add file to this commit's list
 		fixupCommits[commitHash] = append(fixupCommits[commitHash], file)
 	}
 
@@ -166,7 +159,6 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 
 	// Create fixup commits for each target commit
 	for commitHash, files := range fixupCommits {
-		// Show what would be done in dry-run mode
 		if absorbFlags.DryRun {
 			promptsx.InfoWithLastLine(fmt.Sprintf(
 				"Would create fixup! commit for %s with %d file(s):\n     %s",
@@ -177,7 +169,6 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Unstage all files first
 		if err := gitUnstageAll(workDir); err != nil {
 			return fmt.Errorf("failed to unstage files: %w", err)
 		}
@@ -187,7 +178,6 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to stage files: %w", err)
 		}
 
-		// Create fixup commit
 		prompts.Info(fmt.Sprintf("Creating fixup! commit for %s (%d files)", commitHash[:7], len(files)))
 		if err := gitCreateFixupCommit(workDir, commitHash); err != nil {
 			return fmt.Errorf("failed to create fixup commit: %w", err)
@@ -196,7 +186,6 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 
 	// If --and-rebase was specified, run the rebase
 	if absorbFlags.AndRebase {
-		// Find the parent of the oldest commit that needs to be fixed up
 		baseCommit, err := gitFindOldestFixupParent(workDir, fixupCommits)
 		if err != nil {
 			return fmt.Errorf("failed to find base commit for rebase: %w", err)
