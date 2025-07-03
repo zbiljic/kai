@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -18,6 +16,7 @@ import (
 var prprepareCmd = &cobra.Command{
 	Use: "prprepare",
 	Aliases: []string{
+		"prpare",
 		"prp",
 	},
 	Short:       "Transform messy commit history into clean, logical commits",
@@ -72,92 +71,14 @@ func prprepareSetup(cmd *cobra.Command) (string, error) {
 	return setupGitWorkDir()
 }
 
-// generateCommitPlan uses AI to analyze hunks and generate a structured commit plan
-func generateCommitPlan(
-	ctx context.Context,
-	aip llm.AIPrompt,
-	hunks []Hunk,
-	currentBranch,
+// prprepareApplyCommitPlan executes the AI-generated commit plan
+func prprepareApplyCommitPlan(
+	workDir string,
+	commitPlan *llm.CommitPlan,
+	hunks []llm.Hunk,
 	baseBranch string,
-) (*CommitPlan, error) {
-	spinner := prompts.Spinner(prompts.SpinnerOptions{})
-	spinner.Start("Analyzing code changes")
-	spinner.Message(fmt.Sprintf("Using %s to generate commit plan", aip.String()))
-
-	// Build system prompt
-	systemPrompt := `You are a Git expert specializing in commit history reorganization. Your task is to analyze code changes (hunks) and create clean, logical commit plans.
-
-You must respond with a valid JSON object that follows this exact schema:
-{
-  "commits": [
-    {
-      "message": "feat: implement authentication system",
-      "hunk_ids": ["auth.py:10-25", "config.py:5-8"],
-      "rationale": "These changes work together to add JWT authentication"
-    }
-  ]
-}`
-
-	// Build user prompt with hunk information
-	var promptBuilder strings.Builder
-	promptBuilder.WriteString(fmt.Sprintf("Current branch: %s\nBase branch: %s\n\n", currentBranch, baseBranch))
-	promptBuilder.WriteString("Code changes to reorganize:\n\n")
-
-	for _, hunk := range hunks {
-		promptBuilder.WriteString(fmt.Sprintf("Hunk ID: %s\n", hunk.ID))
-		promptBuilder.WriteString(fmt.Sprintf("File: %s\n", hunk.FilePath))
-		promptBuilder.WriteString(fmt.Sprintf("Lines: %d-%d\n", hunk.StartLine, hunk.EndLine))
-		promptBuilder.WriteString(fmt.Sprintf("Type: %s\n", hunk.ChangeType))
-		if hunk.Context != "" {
-			promptBuilder.WriteString(fmt.Sprintf("Context: %s\n", hunk.Context))
-		}
-		promptBuilder.WriteString("Changes:\n")
-		promptBuilder.WriteString(hunk.Content)
-		promptBuilder.WriteString("\n\n---\n\n")
-	}
-
-	promptBuilder.WriteString(`Instructions:
-1. Group hunks by logical functionality (not just file location)
-2. Create conventional commit messages (feat:, fix:, docs:, etc.)
-3. Keep first line ≤80 characters
-4. Each commit should be atomic and self-contained
-5. Order commits logically (dependencies first)
-6. Provide clear rationale for grouping decisions
-
-Respond with valid JSON only.`)
-
-	userPrompt := promptBuilder.String()
-
-	responses, err := aip.Generate(ctx, systemPrompt, userPrompt, 1)
-	if err != nil {
-		spinner.Stop("Failed to generate commit plan", 1)
-		return nil, fmt.Errorf("failed to generate commit plan: %w", err)
-	}
-
-	if len(responses) == 0 {
-		spinner.Stop("No commit plan generated", 1)
-		return nil, fmt.Errorf("no commit plan was generated")
-	}
-
-	response := responses[0]
-
-	// Extract JSON from response (handles markdown-wrapped JSON)
-	jsonContent := extractJSONFromResponse(response)
-
-	// Parse JSON response
-	var commitPlan CommitPlan
-	if err := json.Unmarshal([]byte(jsonContent), &commitPlan); err != nil {
-		spinner.Stop("Failed to parse commit plan", 1)
-		return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nOriginal Response: %s\nExtracted JSON: %s", err, response, jsonContent)
-	}
-
-	spinner.Stop("Commit plan generated", 0)
-
-	return &commitPlan, nil
-}
-
-// applyCommitPlan executes the AI-generated commit plan
-func applyCommitPlan(workDir string, commitPlan *CommitPlan, hunks []Hunk, baseBranch string, dryRun bool) error {
+	dryRun bool,
+) error {
 	// Create hunk lookup map
 	hunkMap := createHunkMap(hunks)
 
@@ -331,7 +252,11 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 	providerSpinner.Stop(fmt.Sprintf("Using %s", aip.String()), 0)
 
 	// Generate commit plan
-	commitPlan, err := generateCommitPlan(
+	spinner := prompts.Spinner(prompts.SpinnerOptions{})
+	spinner.Start("Analyzing code changes")
+	spinner.Message(fmt.Sprintf("Using %s to generate commit plan", aip.String()))
+
+	commitPlan, err := llm.GenerateCommitPlan(
 		cmd.Context(),
 		aip,
 		hunks,
@@ -339,8 +264,11 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 		prprepareFlags.BaseBranch,
 	)
 	if err != nil {
+		spinner.Stop("Failed to generate commit plan", 1)
 		return err
 	}
+
+	spinner.Stop("Commit plan generated", 0)
 
 	// Display the commit plan
 	fmt.Println("")
@@ -373,7 +301,7 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Apply the commit plan
-	err = applyCommitPlan(workDir, commitPlan, hunks, prprepareFlags.BaseBranch, prprepareFlags.DryRun)
+	err = prprepareApplyCommitPlan(workDir, commitPlan, hunks, prprepareFlags.BaseBranch, prprepareFlags.DryRun)
 	if err != nil {
 		if !prprepareFlags.DryRun {
 			prompts.Error("Failed to apply commit plan")

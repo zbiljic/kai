@@ -1,0 +1,17 @@
+Current branch: {{.CurrentBranch}}
+Base branch: {{.BaseBranch}}
+
+Code changes to reorganize:
+
+{{range .Hunks}}Hunk ID: {{.ID}}
+File: {{.FilePath}}
+Lines: {{.StartLine}}-{{.EndLine}}
+Type: {{.ChangeType}}{{if .Context}}
+Context: {{.Context}}{{end}}
+Changes:
+{{.Content}}
+
+---
+
+{{end}}
+Please analyze these code changes and provide a commit reorganization plan in the JSON format specified in the system prompt.
