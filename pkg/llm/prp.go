@@ -15,21 +15,11 @@ import (
 	"github.com/duke-git/lancet/v2/strutil"
 
 	"github.com/zbiljic/kai/pkg/commit"
+	"github.com/zbiljic/kai/pkg/gitdiff"
 )
 
 //go:embed templates/prp/*
 var prpTemplatesFS embed.FS
-
-// Hunk represents a chunk of code changes from a git diff
-type Hunk struct {
-	ID         string `json:"id"`
-	FilePath   string `json:"file_path"`
-	StartLine  int    `json:"start_line"`
-	EndLine    int    `json:"end_line"`
-	Content    string `json:"content"`
-	Context    string `json:"context"`
-	ChangeType string `json:"change_type"`
-}
 
 // CommitPlan represents the AI-generated commit reorganization plan
 type CommitPlan struct {
@@ -107,7 +97,7 @@ func prpGenSystemPrompt() (string, error) {
 }
 
 // prpGenUserPrompt generates user prompt for commit reorganization
-func prpGenUserPrompt(hunks []Hunk, currentBranch, baseBranch string) (string, error) {
+func prpGenUserPrompt(hunks []*gitdiff.Hunk, currentBranch, baseBranch string) (string, error) {
 	tmpl, err := loadPrpTemplates()
 	if err != nil {
 		return "", fmt.Errorf("failed to load prp templates: %w", err)
@@ -169,11 +159,12 @@ func extractJSONFromResponse(response string) string {
 	return response
 }
 
-// GenerateCommitPlan uses AI to analyze hunks and generate a structured commit plan
+// GenerateCommitPlan uses AI to analyze hunks and generate a structured commit
+// plan.
 func GenerateCommitPlan(
 	ctx context.Context,
 	aip AIPrompt,
-	hunks []Hunk,
+	hunks []*gitdiff.Hunk,
 	currentBranch,
 	baseBranch string,
 ) (*CommitPlan, error) {
