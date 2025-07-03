@@ -461,3 +461,187 @@ func gitRemoteBranchExists(workDir, branchName string) bool {
 
 	return strings.TrimSpace(string(output)) != ""
 }
+
+// LineRange represents a range of lines in a file that have been modified
+type LineRange struct {
+	Start int
+	End   int
+}
+
+// BlameInfo contains information about who last modified a specific line
+type BlameInfo struct {
+	CommitHash string
+	LineNumber int
+}
+
+// CommitScore tracks how many lines a commit is responsible for
+type CommitScore struct {
+	CommitHash string
+	Score      int
+	Lines      []int
+}
+
+// gitGetModifiedLineRanges parses the diff output to find which lines are being modified
+func gitGetModifiedLineRanges(workDir, file string) ([]LineRange, error) {
+	out, err := gitexec.Diff(&gitexec.DiffOptions{
+		CmdDir:  workDir,
+		Cached:  true,
+		Unified: 0, // Show no context lines
+		Path:    []string{file},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ranges := []LineRange{}
+	lines := strings.Split(string(out), "\n")
+
+	for _, line := range lines {
+		// Look for lines like "@@ -10,3 +10,4 @@" which indicate line ranges
+		if strings.HasPrefix(line, "@@") {
+			// Parse the line range from the diff header
+			parts := strings.Fields(line)
+			if len(parts) >= 3 {
+				// Extract the new file range (e.g., "+10,4" means starting at line 10, 4 lines)
+				newRange := parts[2]
+				if strings.HasPrefix(newRange, "+") {
+					newRange = newRange[1:] // Remove the '+' prefix
+					rangeParts := strings.Split(newRange, ",")
+					if len(rangeParts) >= 1 {
+						start, err := strconv.Atoi(rangeParts[0])
+						if err != nil {
+							continue
+						}
+
+						count := 1
+						if len(rangeParts) > 1 {
+							if c, err := strconv.Atoi(rangeParts[1]); err == nil {
+								count = c
+							}
+						}
+
+						if count > 0 {
+							ranges = append(ranges, LineRange{
+								Start: start,
+								End:   start + count - 1,
+							})
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return ranges, nil
+}
+
+// gitBlameLines uses git blame to find which commits introduced specific lines
+func gitBlameLines(workDir, file string, lineRanges []LineRange) ([]BlameInfo, error) {
+	var blameInfo []BlameInfo
+
+	for _, lineRange := range lineRanges {
+		// Use git blame with line range using gitexec
+		rangeStr := fmt.Sprintf("%d,%d", lineRange.Start, lineRange.End)
+
+		out, err := gitexec.Blame(&gitexec.BlameOptions{
+			CmdDir:        workDir,
+			LinePorcelain: true,
+			Lstartend:     rangeStr,
+			File:          file,
+		})
+		if err != nil {
+			// If blame fails, skip this range
+			continue
+		}
+
+		// Parse the porcelain output to extract commit hashes
+		lines := strings.Split(string(out), "\n")
+		currentLine := lineRange.Start
+
+		for _, line := range lines {
+			// In porcelain format, commit hash is on lines that start with 40-character hex
+			if len(line) == 40 && isHexString(line) {
+				blameInfo = append(blameInfo, BlameInfo{
+					CommitHash: line,
+					LineNumber: currentLine,
+				})
+				currentLine++
+			}
+		}
+	}
+
+	return blameInfo, nil
+}
+
+// gitFindBestCommitForFile uses line-based analysis to find the most appropriate commit
+// to target for fixup based on which commit introduced the most modified lines
+func gitFindBestCommitForFile(workDir, file string) (string, error) {
+	// Get the line ranges that are being modified
+	modifiedRanges, err := gitGetModifiedLineRanges(workDir, file)
+	if err != nil {
+		return "", fmt.Errorf("failed to get modified line ranges: %w", err)
+	}
+
+	if len(modifiedRanges) == 0 {
+		// fallback to last commit for the file
+		return gitLastCommitForFile(workDir, file)
+	}
+
+	// Get blame information for the modified lines
+	blameInfo, err := gitBlameLines(workDir, file, modifiedRanges)
+	if err != nil {
+		return "", fmt.Errorf("failed to get blame information: %w", err)
+	}
+
+	if len(blameInfo) == 0 {
+		// fallback to last commit for the file
+		return gitLastCommitForFile(workDir, file)
+	}
+
+	// Score each commit based on how many modified lines it introduced
+	commitScores := make(map[string]*CommitScore)
+
+	for _, blame := range blameInfo {
+		if score, exists := commitScores[blame.CommitHash]; exists {
+			score.Score++
+			score.Lines = append(score.Lines, blame.LineNumber)
+		} else {
+			commitScores[blame.CommitHash] = &CommitScore{
+				CommitHash: blame.CommitHash,
+				Score:      1,
+				Lines:      []int{blame.LineNumber},
+			}
+		}
+	}
+
+	// Find the commit with the highest score
+	var bestCommit string
+	var bestScore int
+
+	for _, score := range commitScores {
+		if score.Score > bestScore {
+			bestScore = score.Score
+			bestCommit = score.CommitHash
+		}
+	}
+
+	if bestCommit == "" {
+		// fallback to last commit for the file
+		return gitLastCommitForFile(workDir, file)
+	}
+
+	return bestCommit, nil
+}
+
+// isHexString checks if a string contains only hexadecimal characters
+func isHexString(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, char := range s {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') && (char < 'A' || char > 'F') {
+			return false
+		}
+	}
+	return true
+}

@@ -139,10 +139,10 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 	fixupCommits := make(map[string][]string) // commit -> []files
 
 	for _, file := range stagedFiles {
-		// Use git log to find the last commit that touched this file
-		commitHash, err := gitLastCommitForFile(workDir, file)
+		// Use line-based analysis to find the best commit to target for fixup
+		commitHash, err := gitFindBestCommitForFile(workDir, file)
 		if err != nil {
-			return fmt.Errorf("failed to get last commit for %s: %w", file, err)
+			return fmt.Errorf("failed to find best commit for %s: %w", file, err)
 		}
 
 		if commitHash == "" || commitHash == "0000000000000000000000000000000000000000" {
