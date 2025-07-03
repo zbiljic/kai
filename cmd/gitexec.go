@@ -370,6 +370,16 @@ func gitRebaseAutosquash(workDir, upstream string) error {
 	return err
 }
 
+// gitResetHard performs a hard reset to the specified ref
+func gitResetHard(workDir, ref string) error {
+	_, err := gitexec.Reset(&gitexec.ResetOptions{
+		CmdDir: workDir,
+		Hard:   true,
+		Commit: ref,
+	})
+	return err
+}
+
 // gitCreateBackupBranch creates a backup branch with the current branch's state.
 // The branch name will be in the format: backup/<original_branch_name>-HH-MM-SS
 func gitCreateBackupBranch(workDir string) (string, error) {

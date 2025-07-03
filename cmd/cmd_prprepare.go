@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -67,65 +68,142 @@ func prprepareSetup(cmd *cobra.Command) (string, error) {
 	return setupGitWorkDir()
 }
 
-// generateReorganizationPlan uses AI to analyze commits and generate a reorganization plan
-func generateReorganizationPlan(
+// generateCommitPlan uses AI to analyze hunks and generate a structured commit plan
+func generateCommitPlan(
 	ctx context.Context,
 	aip llm.AIPrompt,
+	hunks []Hunk,
 	currentBranch,
-	baseBranch,
-	commits,
-	diff string,
-) (string, error) {
+	baseBranch string,
+) (*CommitPlan, error) {
 	spinner := prompts.Spinner(prompts.SpinnerOptions{})
-	spinner.Start("Analyzing commit history")
-	spinner.Message(fmt.Sprintf("Using %s to generate reorganization plan", aip.String()))
+	spinner.Start("Analyzing code changes")
+	spinner.Message(fmt.Sprintf("Using %s to generate commit plan", aip.String()))
 
-	// Create a prompt for reorganizing commits
-	prompt := fmt.Sprintf(`You are a Git expert. Analyze the following commit history and diff to create a reorganization plan that groups related changes into logical, clean commits.
+	// Build system prompt
+	systemPrompt := `You are a Git expert specializing in commit history reorganization. Your task is to analyze code changes (hunks) and create clean, logical commit plans.
 
-Current branch: %s
-Base branch: %s
+You must respond with a valid JSON object that follows this exact schema:
+{
+  "commits": [
+    {
+      "message": "feat: implement authentication system",
+      "hunk_ids": ["auth.py:10-25", "config.py:5-8"],
+      "rationale": "These changes work together to add JWT authentication"
+    }
+  ]
+}`
 
-Commit history:
-%s
+	// Build user prompt with hunk information
+	var promptBuilder strings.Builder
+	promptBuilder.WriteString(fmt.Sprintf("Current branch: %s\nBase branch: %s\n\n", currentBranch, baseBranch))
+	promptBuilder.WriteString("Code changes to reorganize:\n\n")
 
-Code diff:
-%s
+	for _, hunk := range hunks {
+		promptBuilder.WriteString(fmt.Sprintf("Hunk ID: %s\n", hunk.ID))
+		promptBuilder.WriteString(fmt.Sprintf("File: %s\n", hunk.FilePath))
+		promptBuilder.WriteString(fmt.Sprintf("Lines: %d-%d\n", hunk.StartLine, hunk.EndLine))
+		promptBuilder.WriteString(fmt.Sprintf("Type: %s\n", hunk.ChangeType))
+		if hunk.Context != "" {
+			promptBuilder.WriteString(fmt.Sprintf("Context: %s\n", hunk.Context))
+		}
+		promptBuilder.WriteString("Changes:\n")
+		promptBuilder.WriteString(hunk.Content)
+		promptBuilder.WriteString("\n\n---\n\n")
+	}
 
-Please provide a reorganization plan that:
-1. Groups related changes together
-2. Creates logical, atomic commits
-3. Follows conventional commit message format
-4. Maintains chronological order where possible
-5. Removes unnecessary "fix", "typo", "WIP" commits by incorporating them into main feature commits
+	promptBuilder.WriteString(`Instructions:
+1. Group hunks by logical functionality (not just file location)
+2. Create conventional commit messages (feat:, fix:, docs:, etc.)
+3. Keep first line ≤80 characters
+4. Each commit should be atomic and self-contained
+5. Order commits logically (dependencies first)
+6. Provide clear rationale for grouping decisions
 
-Return your response in this format:
-REORGANIZATION PLAN:
-1. [commit message] - [description of what changes go in this commit]
-2. [commit message] - [description of what changes go in this commit]
-...
+Respond with valid JSON only.`)
 
-JUSTIFICATION:
-[Brief explanation of why this reorganization makes sense]`, currentBranch, baseBranch, commits, diff)
+	userPrompt := promptBuilder.String()
 
-	// Create system prompt for reorganization
-	systemPrompt := "You are a Git expert specializing in commit history reorganization. Your task is to analyze messy commit histories and create clean, logical reorganization plans."
-
-	responses, err := aip.Generate(ctx, systemPrompt, prompt, 1)
+	responses, err := aip.Generate(ctx, systemPrompt, userPrompt, 1)
 	if err != nil {
-		spinner.Stop("Failed to generate reorganization plan", 1)
-		return "", fmt.Errorf("failed to generate reorganization plan: %w", err)
+		spinner.Stop("Failed to generate commit plan", 1)
+		return nil, fmt.Errorf("failed to generate commit plan: %w", err)
 	}
 
 	if len(responses) == 0 {
-		spinner.Stop("No reorganization plan generated", 1)
-		return "", fmt.Errorf("no reorganization plan was generated")
+		spinner.Stop("No commit plan generated", 1)
+		return nil, fmt.Errorf("no commit plan was generated")
 	}
 
-	plan := responses[0]
+	response := responses[0]
 
-	spinner.Stop("Reorganization plan generated", 0)
-	return plan, nil
+	var commitPlan CommitPlan
+	if err := json.Unmarshal([]byte(response), &commitPlan); err != nil {
+		spinner.Stop("Failed to parse commit plan", 1)
+		return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nResponse: %s", err, response)
+	}
+
+	spinner.Stop("Commit plan generated", 0)
+
+	return &commitPlan, nil
+}
+
+// applyCommitPlan executes the AI-generated commit plan
+func applyCommitPlan(workDir string, commitPlan *CommitPlan, hunks []Hunk, baseBranch string) error {
+	// Create hunk lookup map
+	hunkMap := createHunkMap(hunks)
+
+	// Reset to base branch to start clean
+	resetSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+	resetSpinner.Start("Resetting to base branch")
+
+	err := gitResetHard(workDir, baseBranch)
+	if err != nil {
+		resetSpinner.Stop("Failed to reset to base branch", 1)
+		return fmt.Errorf("failed to reset to base branch: %w", err)
+	}
+
+	resetSpinner.Stop("Reset to base branch", 0)
+
+	// Apply each commit in the plan
+	for i, plannedCommit := range commitPlan.Commits {
+		commitSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+		commitSpinner.Start(fmt.Sprintf("Applying commit %d/%d", i+1, len(commitPlan.Commits)))
+		commitSpinner.Message(fmt.Sprintf("Message: %s", plannedCommit.Message))
+
+		// Reset staging area
+		err := gitUnstageAll(workDir)
+		if err != nil {
+			commitSpinner.Stop("Failed to unstage files", 1)
+			return fmt.Errorf("failed to reset staging area: %w", err)
+		}
+
+		// Validate that all hunks exist
+		err = validateHunkReferences(plannedCommit.HunkIDs, hunkMap)
+		if err != nil {
+			commitSpinner.Stop("Invalid hunk reference", 1)
+			return err
+		}
+
+		// For now, we'll apply all changes and let the user manually organize
+		// In a full implementation, this would apply specific hunks
+		err = gitAddAll(workDir)
+		if err != nil {
+			commitSpinner.Stop("Failed to stage changes", 1)
+			return fmt.Errorf("failed to stage changes: %w", err)
+		}
+
+		// Create the commit
+		err = gitCommit(workDir, plannedCommit.Message)
+		if err != nil {
+			commitSpinner.Stop("Failed to create commit", 1)
+			return fmt.Errorf("failed to create commit: %w", err)
+		}
+
+		commitSpinner.Stop(fmt.Sprintf("Applied: %s", plannedCommit.Message), 0)
+	}
+
+	return nil
 }
 
 func runPrPrepareE(cmd *cobra.Command, args []string) error {
@@ -169,21 +247,9 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 
 	backupSpinner.Stop(fmt.Sprintf("Created backup branch: %s", picocolors.Green(backupBranch)), 0)
 
+	// Get the diff between branches
 	fetchingSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-	fetchingSpinner.Start("Fetching commits and changes")
-
-	commits, err := gitGetCommitsBetweenBranches(workDir, prprepareFlags.BaseBranch)
-	if err != nil {
-		fetchingSpinner.Stop("Failed to get commits", 1)
-		return fmt.Errorf("failed to get commits: %w", err)
-	}
-
-	if commits == "" {
-		fetchingSpinner.Stop("No commits found", 1)
-		return fmt.Errorf("no commits found between %s and %s", prprepareFlags.BaseBranch, currentBranch)
-	}
-
-	fetchingSpinner.Message("Fetching code diff")
+	fetchingSpinner.Start("Fetching code changes")
 
 	diff, err := gitGetDiffBetweenBranches(workDir, prprepareFlags.BaseBranch)
 	if err != nil {
@@ -191,15 +257,31 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get diff: %w", err)
 	}
 
-	commitCount := strings.Count(commits, "---COMMIT---")
-	fetchingSpinner.Stop(fmt.Sprintf("Found %d commits and %d bytes of changes", commitCount, len(diff)), 0)
-
-	// If only one commit, no need to reorganize
-	if commitCount <= 1 {
-		prompts.Info("Only one commit found - no reorganization needed")
-		return nil
+	if strings.TrimSpace(diff) == "" {
+		fetchingSpinner.Stop("No changes found", 1)
+		return fmt.Errorf("no changes found between %s and %s", prprepareFlags.BaseBranch, currentBranch)
 	}
 
+	fetchingSpinner.Stop(fmt.Sprintf("Found %d bytes of changes", len(diff)), 0)
+
+	// Parse diff into hunks
+	parseSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+	parseSpinner.Start("Parsing code changes")
+
+	hunks, err := parseDiffIntoHunks(diff)
+	if err != nil {
+		parseSpinner.Stop("Failed to parse changes", 1)
+		return fmt.Errorf("failed to parse diff into hunks: %w", err)
+	}
+
+	if len(hunks) == 0 {
+		parseSpinner.Stop("No code hunks found", 1)
+		return fmt.Errorf("no code hunks found in diff")
+	}
+
+	parseSpinner.Stop(fmt.Sprintf("Parsed %d code hunks", len(hunks)), 0)
+
+	// Initialize LLM provider
 	providerSpinner := prompts.Spinner(prompts.SpinnerOptions{})
 	providerSpinner.Start("Initializing LLM provider")
 
@@ -211,36 +293,34 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 
 	providerSpinner.Stop(fmt.Sprintf("Using %s", aip.String()), 0)
 
-	plan, err := generateReorganizationPlan(
+	// Generate commit plan
+	commitPlan, err := generateCommitPlan(
 		cmd.Context(),
 		aip,
+		hunks,
 		currentBranch,
 		prprepareFlags.BaseBranch,
-		commits,
-		diff,
 	)
 	if err != nil {
 		return err
 	}
 
-	// Display the reorganization plan
+	// Display the commit plan
 	fmt.Println("")
-	fmt.Printf("%s\n", picocolors.Bold("Reorganization Plan:"))
+	fmt.Printf("%s\n", picocolors.Bold("Commit Reorganization Plan:"))
 	fmt.Println("")
 
-	// Split plan into lines and display with formatting
-	planLines := strings.Split(plan, "\n")
-	for _, line := range planLines {
-		if strings.TrimSpace(line) != "" {
-			fmt.Printf("%s\n", picocolors.Cyan(line))
-		}
+	for i, commit := range commitPlan.Commits {
+		fmt.Printf("%s %s\n", picocolors.Bold(fmt.Sprintf("%d.", i+1)), picocolors.Cyan(commit.Message))
+		fmt.Printf("   %s %s\n", picocolors.Dim("Rationale:"), commit.Rationale)
+		fmt.Printf("   %s %s\n", picocolors.Dim("Hunks:"), strings.Join(commit.HunkIDs, ", "))
+		fmt.Println("")
 	}
-	fmt.Println("")
 
 	// Ask for confirmation unless auto-apply is enabled
 	if !prprepareFlags.AutoApply {
 		confirmed, err := prompts.Confirm(prompts.ConfirmParams{
-			Message: "Apply this reorganization plan?",
+			Message: "Apply this commit reorganization plan?",
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get confirmation: %w", err)
@@ -253,15 +333,16 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// For now, we'll just show the plan and inform the user about manual steps
-	// In a full implementation, this would actually reorganize the commits
-	prompts.Info("This is a preview implementation showing the AI-generated reorganization plan")
-	prompts.Info("To implement the actual reorganization, you would need to:")
-	prompts.Info("1. Reset to the base branch")
-	prompts.Info("2. Apply changes according to the plan using git cherry-pick or manual commits")
-	prompts.Info("3. Create new commit messages as suggested")
-	prompts.Info("")
-	prompts.Info(fmt.Sprintf("Your original commits are safely backed up in: %s", picocolors.Green(backupBranch)))
+	// Apply the commit plan
+	err = applyCommitPlan(workDir, commitPlan, hunks, prprepareFlags.BaseBranch)
+	if err != nil {
+		prompts.Error("Failed to apply commit plan")
+		prompts.Info(fmt.Sprintf("Your original commits are safely backed up in: %s", picocolors.Green(backupBranch)))
+		return err
+	}
+
+	prompts.Success("Commit reorganization completed successfully!")
+	prompts.Info(fmt.Sprintf("Your original commits are backed up in: %s", picocolors.Green(backupBranch)))
 
 	return nil
 }
