@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -678,6 +680,98 @@ func gitFindBestCommitForFile(workDir, file string) (string, error) {
 	}
 
 	return bestCommit, nil
+}
+
+// gitApplyPatchWithStdin applies a patch using git apply with stdin input
+func gitApplyPatchWithStdin(workDir, patchContent string) error {
+	if strings.TrimSpace(patchContent) == "" {
+		return nil // Nothing to apply
+	}
+
+	// Create the git apply command
+	cmd := exec.Command("git", "apply", "--cached", "--")
+	cmd.Dir = workDir
+
+	// Set up stdin pipe
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdin pipe: %w", err)
+	}
+
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		stdin.Close()
+		return fmt.Errorf("failed to start git apply: %w", err)
+	}
+
+	// Write patch content to stdin
+	_, err = io.WriteString(stdin, patchContent)
+	if err != nil {
+		stdin.Close()
+		_ = cmd.Wait()
+		return fmt.Errorf("failed to write patch to stdin: %w", err)
+	}
+
+	// Close stdin and wait for command to complete
+	err = stdin.Close()
+	if err != nil {
+		_ = cmd.Wait()
+		return fmt.Errorf("failed to close stdin: %w", err)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("git apply failed: %w", err)
+	}
+
+	return nil
+}
+
+// gitCheckPatchApplicability validates if a patch can be applied without actually applying it
+func gitCheckPatchApplicability(workDir, patchContent string) error {
+	if strings.TrimSpace(patchContent) == "" {
+		return nil // Nothing to check
+	}
+
+	// Create the git apply --check command
+	cmd := exec.Command("git", "apply", "--check", "--cached", "--")
+	cmd.Dir = workDir
+
+	// Set up stdin pipe
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdin pipe for patch check: %w", err)
+	}
+
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		stdin.Close()
+		return fmt.Errorf("failed to start git apply --check: %w", err)
+	}
+
+	// Write patch content to stdin
+	_, err = io.WriteString(stdin, patchContent)
+	if err != nil {
+		stdin.Close()
+		_ = cmd.Wait()
+		return fmt.Errorf("failed to write patch to stdin for check: %w", err)
+	}
+
+	// Close stdin and wait for command to complete
+	err = stdin.Close()
+	if err != nil {
+		_ = cmd.Wait()
+		return fmt.Errorf("failed to close stdin for patch check: %w", err)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("patch check failed - patch cannot be applied cleanly: %w", err)
+	}
+
+	return nil
 }
 
 // isHexString checks if a string contains only hexadecimal characters

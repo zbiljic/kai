@@ -133,12 +133,21 @@ func prprepareApplyCommitPlan(
 				return err
 			}
 
-			// For now, we'll apply all changes and let the user manually organize
-			// In a full implementation, this would apply specific hunks
-			err = gitAddAll(workDir)
+			// Apply specific hunks for this commit
+			hunksForCommit := getHunksForCommit(plannedCommit.HunkIDs, hunkMap)
+			patchContent := convertHunksToPatch(hunksForCommit)
+
+			// Check if patch can be applied before attempting
+			err = gitCheckPatchApplicability(workDir, patchContent)
 			if err != nil {
-				commitSpinner.Stop("Failed to stage changes", 1)
-				return fmt.Errorf("failed to stage changes: %w", err)
+				commitSpinner.Stop("Patch cannot be applied", 1)
+				return fmt.Errorf("patch validation failed for commit %d: %w", i+1, err)
+			}
+
+			err = gitApplyPatchWithStdin(workDir, patchContent)
+			if err != nil {
+				commitSpinner.Stop("Failed to apply patch", 1)
+				return fmt.Errorf("failed to apply patch for commit %d: %w", i+1, err)
 			}
 
 			// Create the commit
