@@ -12,6 +12,7 @@ import (
 	"github.com/thediveo/enumflag/v2"
 
 	"github.com/zbiljic/kai/pkg/llm"
+	"github.com/zbiljic/kai/pkg/promptsx"
 )
 
 var prprepareCmd = &cobra.Command{
@@ -32,6 +33,7 @@ var prprepareFlags = prprepareOptions{
 	BaseBranch:  "main",
 	MaxDiffSize: llm.DefaultMaxDiffSize,
 	AutoApply:   false,
+	DryRun:      false,
 }
 
 func prprepareAddFlags(cmd *cobra.Command) {
@@ -40,6 +42,7 @@ func prprepareAddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&prprepareFlags.BaseBranch, "base", "b", "main", "Base branch to compare against")
 	cmd.Flags().IntVar(&prprepareFlags.MaxDiffSize, "max-diff", 10000, "Maximum size of diff to send to LLM (in characters)")
 	cmd.Flags().BoolVar(&prprepareFlags.AutoApply, "auto-apply", false, "Automatically apply the reorganization without confirmation")
+	cmd.Flags().BoolVarP(&prprepareFlags.DryRun, "dry-run", "n", false, "Don't make any actual changes, just show what would be done")
 }
 
 func init() {
@@ -54,6 +57,7 @@ type prprepareOptions struct {
 	BaseBranch  string
 	MaxDiffSize int
 	AutoApply   bool
+	DryRun      bool
 }
 
 // prprepareSetupCommandClackIntro sets up clack intro and injects into command context
@@ -149,58 +153,78 @@ Respond with valid JSON only.`)
 }
 
 // applyCommitPlan executes the AI-generated commit plan
-func applyCommitPlan(workDir string, commitPlan *CommitPlan, hunks []Hunk, baseBranch string) error {
+func applyCommitPlan(workDir string, commitPlan *CommitPlan, hunks []Hunk, baseBranch string, dryRun bool) error {
 	// Create hunk lookup map
 	hunkMap := createHunkMap(hunks)
 
-	// Reset to base branch to start clean
-	resetSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-	resetSpinner.Start("Resetting to base branch")
+	if dryRun {
+		promptsx.Note(fmt.Sprintf("Would reset to base branch: %s", baseBranch))
+	} else {
+		// Reset to base branch to start clean
+		resetSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+		resetSpinner.Start("Resetting to base branch")
 
-	err := gitResetHard(workDir, baseBranch)
-	if err != nil {
-		resetSpinner.Stop("Failed to reset to base branch", 1)
-		return fmt.Errorf("failed to reset to base branch: %w", err)
+		err := gitResetHard(workDir, baseBranch)
+		if err != nil {
+			resetSpinner.Stop("Failed to reset to base branch", 1)
+			return fmt.Errorf("failed to reset to base branch: %w", err)
+		}
+
+		resetSpinner.Stop("Reset to base branch", 0)
 	}
-
-	resetSpinner.Stop("Reset to base branch", 0)
 
 	// Apply each commit in the plan
 	for i, plannedCommit := range commitPlan.Commits {
-		commitSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-		commitSpinner.Start(fmt.Sprintf("Applying commit %d/%d", i+1, len(commitPlan.Commits)))
-		commitSpinner.Message(fmt.Sprintf("Message: %s", plannedCommit.Message))
+		if dryRun {
+			// Validate that all hunks exist
+			err := validateHunkReferences(plannedCommit.HunkIDs, hunkMap)
+			if err != nil {
+				return err
+			}
 
-		// Reset staging area
-		err := gitUnstageAll(workDir)
-		if err != nil {
-			commitSpinner.Stop("Failed to unstage files", 1)
-			return fmt.Errorf("failed to reset staging area: %w", err)
+			promptsx.InfoWithLastLine(fmt.Sprintf(
+				"Would create commit %d/%d:\n   Message: %s\n   Hunks: %s",
+				i+1,
+				len(commitPlan.Commits),
+				plannedCommit.Message,
+				strings.Join(plannedCommit.HunkIDs, ", "),
+			))
+		} else {
+			commitSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+			commitSpinner.Start(fmt.Sprintf("Applying commit %d/%d", i+1, len(commitPlan.Commits)))
+			commitSpinner.Message(fmt.Sprintf("Message: %s", plannedCommit.Message))
+
+			// Reset staging area
+			err := gitUnstageAll(workDir)
+			if err != nil {
+				commitSpinner.Stop("Failed to unstage files", 1)
+				return fmt.Errorf("failed to reset staging area: %w", err)
+			}
+
+			// Validate that all hunks exist
+			err = validateHunkReferences(plannedCommit.HunkIDs, hunkMap)
+			if err != nil {
+				commitSpinner.Stop("Invalid hunk reference", 1)
+				return err
+			}
+
+			// For now, we'll apply all changes and let the user manually organize
+			// In a full implementation, this would apply specific hunks
+			err = gitAddAll(workDir)
+			if err != nil {
+				commitSpinner.Stop("Failed to stage changes", 1)
+				return fmt.Errorf("failed to stage changes: %w", err)
+			}
+
+			// Create the commit
+			err = gitCommit(workDir, plannedCommit.Message)
+			if err != nil {
+				commitSpinner.Stop("Failed to create commit", 1)
+				return fmt.Errorf("failed to create commit: %w", err)
+			}
+
+			commitSpinner.Stop(fmt.Sprintf("Applied: %s", plannedCommit.Message), 0)
 		}
-
-		// Validate that all hunks exist
-		err = validateHunkReferences(plannedCommit.HunkIDs, hunkMap)
-		if err != nil {
-			commitSpinner.Stop("Invalid hunk reference", 1)
-			return err
-		}
-
-		// For now, we'll apply all changes and let the user manually organize
-		// In a full implementation, this would apply specific hunks
-		err = gitAddAll(workDir)
-		if err != nil {
-			commitSpinner.Stop("Failed to stage changes", 1)
-			return fmt.Errorf("failed to stage changes: %w", err)
-		}
-
-		// Create the commit
-		err = gitCommit(workDir, plannedCommit.Message)
-		if err != nil {
-			commitSpinner.Stop("Failed to create commit", 1)
-			return fmt.Errorf("failed to create commit: %w", err)
-		}
-
-		commitSpinner.Stop(fmt.Sprintf("Applied: %s", plannedCommit.Message), 0)
 	}
 
 	return nil
@@ -233,19 +257,28 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	prompts.Info(fmt.Sprintf("Analyzing commits on branch %s compared to %s", picocolors.Cyan(currentBranch), picocolors.Cyan(prprepareFlags.BaseBranch)))
-
-	// Create backup branch first
-	backupSpinner := prompts.Spinner(prompts.SpinnerOptions{})
-	backupSpinner.Start("Creating backup branch")
-
-	backupBranch, err := gitCreateBackupBranch(workDir)
-	if err != nil {
-		backupSpinner.Stop("Failed to create backup", 1)
-		return err
+	if prprepareFlags.DryRun {
+		promptsx.Note("Running in dry-run mode. No changes will be made.")
 	}
 
-	backupSpinner.Stop(fmt.Sprintf("Created backup branch: %s", picocolors.Green(backupBranch)), 0)
+	prompts.Info(fmt.Sprintf("Analyzing commits on branch %s compared to %s", picocolors.Cyan(currentBranch), picocolors.Cyan(prprepareFlags.BaseBranch)))
+
+	// Create backup branch first (unless dry-run)
+	var backupBranch string
+	if prprepareFlags.DryRun {
+		promptsx.Note("Would create backup branch")
+	} else {
+		backupSpinner := prompts.Spinner(prompts.SpinnerOptions{})
+		backupSpinner.Start("Creating backup branch")
+
+		backupBranch, err = gitCreateBackupBranch(workDir)
+		if err != nil {
+			backupSpinner.Stop("Failed to create backup", 1)
+			return err
+		}
+
+		backupSpinner.Stop(fmt.Sprintf("Created backup branch: %s", picocolors.Green(backupBranch)), 0)
+	}
 
 	// Get the diff between branches
 	fetchingSpinner := prompts.Spinner(prompts.SpinnerOptions{})
@@ -317,8 +350,8 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 		fmt.Println("")
 	}
 
-	// Ask for confirmation unless auto-apply is enabled
-	if !prprepareFlags.AutoApply {
+	// Ask for confirmation unless auto-apply or dry-run is enabled
+	if !prprepareFlags.AutoApply && !prprepareFlags.DryRun {
 		confirmed, err := prompts.Confirm(prompts.ConfirmParams{
 			Message: "Apply this commit reorganization plan?",
 		})
@@ -328,21 +361,33 @@ func runPrPrepareE(cmd *cobra.Command, args []string) error {
 
 		if !confirmed {
 			prompts.Info("Reorganization cancelled")
-			prompts.Info(fmt.Sprintf("Your backup branch %s is available if needed", picocolors.Green(backupBranch)))
+			if backupBranch != "" {
+				prompts.Info(fmt.Sprintf("Your backup branch %s is available if needed", picocolors.Green(backupBranch)))
+			}
 			return nil
 		}
 	}
 
 	// Apply the commit plan
-	err = applyCommitPlan(workDir, commitPlan, hunks, prprepareFlags.BaseBranch)
+	err = applyCommitPlan(workDir, commitPlan, hunks, prprepareFlags.BaseBranch, prprepareFlags.DryRun)
 	if err != nil {
-		prompts.Error("Failed to apply commit plan")
-		prompts.Info(fmt.Sprintf("Your original commits are safely backed up in: %s", picocolors.Green(backupBranch)))
+		if !prprepareFlags.DryRun {
+			prompts.Error("Failed to apply commit plan")
+			if backupBranch != "" {
+				prompts.Info(fmt.Sprintf("Your original commits are safely backed up in: %s", picocolors.Green(backupBranch)))
+			}
+		}
 		return err
 	}
 
-	prompts.Success("Commit reorganization completed successfully!")
-	prompts.Info(fmt.Sprintf("Your original commits are backed up in: %s", picocolors.Green(backupBranch)))
+	if prprepareFlags.DryRun {
+		promptsx.Note("Dry-run completed. No actual changes were made.")
+	} else {
+		prompts.Success("Commit reorganization completed successfully!")
+		if backupBranch != "" {
+			prompts.Info(fmt.Sprintf("Your original commits are backed up in: %s", picocolors.Green(backupBranch)))
+		}
+	}
 
 	return nil
 }
