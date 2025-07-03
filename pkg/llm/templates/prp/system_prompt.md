@@ -18,5 +18,6 @@ Key requirements:
 4. Each commit should be atomic and self-contained
 5. Order commits logically (dependencies first)
 6. Provide clear rationale for grouping decisions
+7. For conventional commits, the message after the colon should start with lowercase (e.g., "feat: add authentication" not "feat: Add authentication")
 
 Respond with valid JSON only.

@@ -10,6 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/duke-git/lancet/v2/slice"
+	"github.com/duke-git/lancet/v2/strutil"
+
+	"github.com/zbiljic/kai/pkg/commit"
 )
 
 //go:embed templates/prp/*
@@ -203,6 +208,14 @@ func GenerateCommitPlan(
 	if err := json.Unmarshal([]byte(jsonContent), &commitPlan); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nOriginal Response: %s\nExtracted JSON: %s", err, response, jsonContent)
 	}
+
+	// Ensure commit messages follow lowercase convention after colon
+	commitPlan.Commits = slice.Map(commitPlan.Commits, func(_ int, plannedCommit PlannedCommit) PlannedCommit {
+		m := commit.ParseMessage(plannedCommit.Message)
+		m.CommitMessage = strutil.LowerFirst(m.CommitMessage)
+		plannedCommit.Message = m.ToString()
+		return plannedCommit
+	})
 
 	return &commitPlan, nil
 }
