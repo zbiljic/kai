@@ -141,10 +141,14 @@ Respond with valid JSON only.`)
 
 	response := responses[0]
 
+	// Extract JSON from response (handles markdown-wrapped JSON)
+	jsonContent := extractJSONFromResponse(response)
+
+	// Parse JSON response
 	var commitPlan CommitPlan
-	if err := json.Unmarshal([]byte(response), &commitPlan); err != nil {
+	if err := json.Unmarshal([]byte(jsonContent), &commitPlan); err != nil {
 		spinner.Stop("Failed to parse commit plan", 1)
-		return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nResponse: %s", err, response)
+		return nil, fmt.Errorf("failed to parse AI response as JSON: %w\nOriginal Response: %s\nExtracted JSON: %s", err, response, jsonContent)
 	}
 
 	spinner.Stop("Commit plan generated", 0)

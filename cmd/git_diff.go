@@ -128,3 +128,41 @@ func validateHunkReferences(hunkIDs []string, hunkMap map[string]*Hunk) error {
 	}
 	return nil
 }
+
+// extractJSONFromResponse extracts JSON content from AI responses that may be wrapped in markdown
+func extractJSONFromResponse(response string) string {
+	// Remove leading/trailing whitespace
+	response = strings.TrimSpace(response)
+
+	// Check if response is wrapped in markdown code block
+	if strings.HasPrefix(response, "```") {
+		// Find the first ``` and the closing ```
+		lines := strings.Split(response, "\n")
+		var jsonLines []string
+		inCodeBlock := false
+
+		for _, line := range lines {
+			if strings.HasPrefix(line, "```") {
+				if inCodeBlock {
+					// End of code block, stop collecting
+					break
+				} else {
+					// Start of code block, start collecting from next line
+					inCodeBlock = true
+					continue
+				}
+			}
+
+			if inCodeBlock {
+				jsonLines = append(jsonLines, line)
+			}
+		}
+
+		if len(jsonLines) > 0 {
+			return strings.Join(jsonLines, "\n")
+		}
+	}
+
+	// If no markdown wrapper found, return original response
+	return response
+}
