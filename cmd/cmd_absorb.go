@@ -135,14 +135,42 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error detecting staged files: %w", err)
 	}
 
-	// For each staged file, find the appropriate commit to fixup
+	// Find and process fixup commits
+	fixupCommits, err := absorbFindFixupCommits(workDir, stagedFiles)
+	if err != nil {
+		return err
+	}
+
+	if len(fixupCommits) == 0 {
+		promptsx.Note("No appropriate commits found to fixup. All changes appear to be new.")
+		return nil
+	}
+
+	// Create fixup commits
+	if err := absorbCreateFixupCommits(workDir, fixupCommits); err != nil {
+		return err
+	}
+
+	// Handle rebase if requested
+	if absorbFlags.AndRebase {
+		return absorbHandleRebase(workDir, fixupCommits)
+	}
+
+	if !absorbFlags.DryRun {
+		promptsx.Note("Run 'git rebase --autosquash -i' to apply the fixup commits")
+	}
+
+	return nil
+}
+
+func absorbFindFixupCommits(workDir string, stagedFiles []string) (map[string][]string, error) {
 	fixupCommits := make(map[string][]string) // commit -> []files
 
 	for _, file := range stagedFiles {
 		// Use line-based analysis to find the best commit to target for fixup
 		commitHash, err := gitFindBestCommitForFile(workDir, file)
 		if err != nil {
-			return fmt.Errorf("failed to find best commit for %s: %w", file, err)
+			return nil, fmt.Errorf("failed to find best commit for %s: %w", file, err)
 		}
 
 		if commitHash == "" || commitHash == "0000000000000000000000000000000000000000" {
@@ -152,12 +180,10 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 		fixupCommits[commitHash] = append(fixupCommits[commitHash], file)
 	}
 
-	if len(fixupCommits) == 0 {
-		promptsx.Note("No appropriate commits found to fixup. All changes appear to be new.")
-		return nil
-	}
+	return fixupCommits, nil
+}
 
-	// Create fixup commits for each target commit
+func absorbCreateFixupCommits(workDir string, fixupCommits map[string][]string) error {
 	for commitHash, files := range fixupCommits {
 		if absorbFlags.DryRun {
 			promptsx.InfoWithLastLine(fmt.Sprintf(
@@ -184,78 +210,95 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// If --and-rebase was specified, run the rebase
-	if absorbFlags.AndRebase {
-		baseCommit, err := gitFindOldestFixupParent(workDir, fixupCommits)
+	return nil
+}
+
+func absorbHandleRebase(workDir string, fixupCommits map[string][]string) error {
+	baseCommit, err := gitFindOldestFixupParent(workDir, fixupCommits)
+	if err != nil {
+		return fmt.Errorf("failed to find base commit for rebase: %w", err)
+	}
+
+	rebaseCmdString := gitDebugRebaseAutosquash(workDir, baseCommit)
+
+	if absorbFlags.DryRun {
+		promptsx.InfoNoSplitLines("Would run: " + rebaseCmdString)
+		return nil
+	}
+
+	// Create backup branch if requested
+	backupBranch, err := absorbCreateBackupIfNeeded(workDir)
+	if err != nil {
+		return err
+	}
+
+	// Run the rebase
+	if err := absorbExecuteRebase(workDir, baseCommit, backupBranch); err != nil {
+		return err
+	}
+
+	// Show completion message
+	if backupBranch != "" {
+		prompts.Outro(fmt.Sprintf("%s Rebase completed successfully. Backup branch: %s",
+			picocolors.Green("✔"), backupBranch))
+	} else {
+		prompts.Outro(fmt.Sprintf("%s Rebase completed successfully", picocolors.Green("✔")))
+	}
+
+	return nil
+}
+
+func absorbCreateBackupIfNeeded(workDir string) (string, error) {
+	if !absorbFlags.Backup {
+		return "", nil
+	}
+
+	// Check if a backup branch already exists
+	existingBackup, err := gitFindExistingBackupBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to check for existing backup branch: %w", err)
+	}
+
+	if existingBackup != "" {
+		// Use the existing backup branch
+		prompts.Info(fmt.Sprintf("Using existing backup branch: %s", existingBackup))
+		return existingBackup, nil
+	}
+
+	// Create a new backup branch
+	backupBranch, err := gitCreateBackupBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup branch: %w", err)
+	}
+
+	prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+	return backupBranch, nil
+}
+
+func absorbExecuteRebase(workDir, baseCommit, backupBranch string) error {
+	prompts.Info("Running 'git rebase --autosquash'...")
+
+	if baseCommit == "" {
+		// Fall back to the current branch if no fixup commits found
+		currentBranch, err := gitCurrentBranch(workDir)
 		if err != nil {
-			return fmt.Errorf("failed to find base commit for rebase: %w", err)
+			return fmt.Errorf("failed to get current branch: %w", err)
 		}
+		baseCommit = currentBranch
+	}
 
+	if err := gitRebaseAutosquash(workDir, baseCommit); err != nil {
 		rebaseCmdString := gitDebugRebaseAutosquash(workDir, baseCommit)
+		promptsx.ErrorNoSplitLines("Rebase failed: " + rebaseCmdString)
 
-		if absorbFlags.DryRun {
-			promptsx.InfoNoSplitLines("Would run: " + rebaseCmdString)
-		} else {
-			var backupBranch string
-			var existingBackup string
-			var err error
-
-			// Create a backup branch if --backup is set
-			if absorbFlags.Backup {
-				// Check if a backup branch already exists
-				existingBackup, err = gitFindExistingBackupBranch(workDir)
-				if err != nil {
-					return fmt.Errorf("failed to check for existing backup branch: %w", err)
-				}
-
-				if existingBackup != "" {
-					// Use the existing backup branch
-					backupBranch = existingBackup
-					prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
-				} else {
-					// Create a new backup branch
-					backupBranch, err = gitCreateBackupBranch(workDir)
-					if err != nil {
-						return fmt.Errorf("failed to create backup branch: %w", err)
-					}
-
-					prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
-				}
-			}
-
-			prompts.Info("Running 'git rebase --autosquash'...")
-
-			if baseCommit == "" {
-				// Fall back to the current branch if no fixup commits found
-				currentBranch, err := gitCurrentBranch(workDir)
-				if err != nil {
-					return fmt.Errorf("failed to get current branch: %w", err)
-				}
-				baseCommit = currentBranch
-			}
-
-			if err := gitRebaseAutosquash(workDir, baseCommit); err != nil {
-				promptsx.ErrorNoSplitLines("Rebase failed: " + rebaseCmdString)
-
-				// Provide instructions to restore from backup if one was created
-				if absorbFlags.Backup && backupBranch != "" {
-					errMsg := fmt.Sprintf("%s Rebase failed. To restore your original branch, run:\n    git checkout -f %s",
-						picocolors.Red("✖"), backupBranch)
-					return fmt.Errorf("%s\n%s", err, errMsg)
-				}
-
-				return fmt.Errorf("rebase failed: %w", err)
-			}
-
-			if absorbFlags.Backup && backupBranch != "" {
-				prompts.Outro(fmt.Sprintf("%s Rebase completed successfully. Backup branch: %s",
-					picocolors.Green("✔"), backupBranch))
-			} else {
-				prompts.Outro(fmt.Sprintf("%s Rebase completed successfully", picocolors.Green("✔")))
-			}
+		// Provide instructions to restore from backup if one was created
+		if backupBranch != "" {
+			errMsg := fmt.Sprintf("%s Rebase failed. To restore your original branch, run:\n    git checkout -f %s",
+				picocolors.Red("✖"), backupBranch)
+			return fmt.Errorf("%s\n%s", err, errMsg)
 		}
-	} else if !absorbFlags.DryRun {
-		promptsx.Note("Run 'git rebase --autosquash -i' to apply the fixup commits")
+
+		return fmt.Errorf("rebase failed: %w", err)
 	}
 
 	return nil
