@@ -197,16 +197,30 @@ func runAbsorbE(cmd *cobra.Command, args []string) error {
 			promptsx.InfoNoSplitLines("Would run: " + rebaseCmdString)
 		} else {
 			var backupBranch string
+			var existingBackup string
 			var err error
 
 			// Create a backup branch if --backup is set
 			if absorbFlags.Backup {
-				backupBranch, err = gitCreateBackupBranch(workDir)
+				// Check if a backup branch already exists
+				existingBackup, err = gitFindExistingBackupBranch(workDir)
 				if err != nil {
-					return fmt.Errorf("failed to create backup branch: %w", err)
+					return fmt.Errorf("failed to check for existing backup branch: %w", err)
 				}
 
-				prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+				if existingBackup != "" {
+					// Use the existing backup branch
+					backupBranch = existingBackup
+					prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
+				} else {
+					// Create a new backup branch
+					backupBranch, err = gitCreateBackupBranch(workDir)
+					if err != nil {
+						return fmt.Errorf("failed to create backup branch: %w", err)
+					}
+
+					prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+				}
 			}
 
 			prompts.Info("Running 'git rebase --autosquash'...")

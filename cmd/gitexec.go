@@ -396,6 +396,43 @@ func gitCreateBackupBranch(workDir string) (string, error) {
 	return backupBranchName, nil
 }
 
+// gitFindExistingBackupBranch checks if any backup branch already exists for
+// the current branch. Returns the name of the existing backup branch if found,
+// empty string if none exists.
+func gitFindExistingBackupBranch(workDir string) (string, error) {
+	// Get current branch name
+	currentBranch, err := gitCurrentBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to get current branch name: %w", err)
+	}
+
+	// Look for branches that start with "backup/<current_branch_name>-"
+	backupPrefix := fmt.Sprintf("backup/%s-", currentBranch)
+
+	opts := &gitexec.BranchOptions{
+		CmdDir: workDir,
+		List:   true,
+	}
+	output, err := gitexec.Branch(opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to list branches: %w", err)
+	}
+
+	// Parse the branch list and look for backup branches
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		// Remove leading spaces and asterisk (current branch marker)
+		branchName := strings.TrimSpace(strings.TrimPrefix(line, "*"))
+		branchName = strings.TrimSpace(branchName)
+
+		if strings.HasPrefix(branchName, backupPrefix) {
+			return branchName, nil
+		}
+	}
+
+	return "", nil
+}
+
 // gitGetCommitsBetweenBranches returns commits between current branch and base branch
 func gitGetCommitsBetweenBranches(workDir, baseBranch string) (string, error) {
 	opts := &gitexec.LogOptions{
