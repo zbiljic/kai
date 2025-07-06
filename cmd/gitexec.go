@@ -443,6 +443,33 @@ func gitFindExistingBackupBranch(workDir string) (string, error) {
 	return "", nil
 }
 
+// createBackupBranchIfNeeded creates a backup branch if needed, checking for existing ones first.
+// This is a common function used by multiple commands to avoid creating duplicate backup branches.
+func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, error) {
+	if !shouldCreate {
+		return "", nil
+	}
+
+	// Check if a backup branch already exists
+	existingBackup, err := gitFindExistingBackupBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to check for existing backup branch: %w", err)
+	}
+
+	if existingBackup != "" {
+		// Use the existing backup branch
+		return existingBackup, nil
+	}
+
+	// Create a new backup branch
+	backupBranch, err := gitCreateBackupBranch(workDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup branch: %w", err)
+	}
+
+	return backupBranch, nil
+}
+
 // gitGetCommitsBetweenBranches returns commits between current branch and base branch
 func gitGetCommitsBetweenBranches(workDir, baseBranch string) (string, error) {
 	opts := &gitexec.LogOptions{
