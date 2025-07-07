@@ -23,6 +23,10 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
 				Model: model,
 			}), nil
+		case GroqProvider:
+			return provider.NewGroqProvider(provider.GroqOptions{
+				Model: model,
+			}), nil
 		case PhindProvider:
 			return provider.NewPhindProvider(provider.PhindOptions{
 				Model: model,
@@ -38,6 +42,11 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
 				Model: model,
 			})
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewGroqProvider(provider.GroqOptions{
+				Model: model,
+			}), nil
 		}},
 		{create: func() (llm.AIPrompt, error) {
 			return provider.NewOpenRouterProvider(provider.OpenRouterOptions{
