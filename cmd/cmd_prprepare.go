@@ -9,7 +9,6 @@ import (
 	"github.com/orochaa/go-clack/prompts"
 	"github.com/orochaa/go-clack/third_party/picocolors"
 	"github.com/spf13/cobra"
-	"github.com/thediveo/enumflag/v2"
 
 	"github.com/zbiljic/kai/pkg/gitdiff"
 	"github.com/zbiljic/kai/pkg/llm"
@@ -40,8 +39,6 @@ var prprepareFlags = prprepareOptions{
 }
 
 func prprepareAddFlags(cmd *cobra.Command) {
-	cmd.Flags().VarP(enumflag.New(&prprepareFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating reorganized commits (phind, openai, googleai, openrouter)")
-	cmd.Flags().StringVarP(&prprepareFlags.Model, "model", "m", "", "Specific model to use for the selected provider")
 	cmd.Flags().StringVarP(&prprepareFlags.BaseBranch, "base", "b", "main", "Base branch to compare against")
 	cmd.Flags().IntVar(&prprepareFlags.MaxDiffSize, "max-diff", 10000, "Maximum size of diff to send to LLM (in characters)")
 	cmd.Flags().BoolVar(&prprepareFlags.AutoApply, "auto-apply", false, "Automatically apply the reorganization without confirmation")
@@ -50,6 +47,7 @@ func prprepareAddFlags(cmd *cobra.Command) {
 }
 
 func init() {
+	addCommonLLMFlags(prprepareCmd, &prprepareFlags.Provider, &prprepareFlags.Model)
 	prprepareAddFlags(prprepareCmd)
 
 	rootCmd.AddCommand(prprepareCmd)

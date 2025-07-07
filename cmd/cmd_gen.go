@@ -46,8 +46,6 @@ var genFlags = genOptions{
 
 func genAddFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(enumflag.New(&genFlags.Type, "type", commit.TypeIds, enumflag.EnumCaseInsensitive), "type", "t", "Type of commit message to generate")
-	cmd.Flags().VarP(enumflag.New(&genFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating commit messages (phind, openai, googleai, openrouter)")
-	cmd.Flags().StringVarP(&genFlags.Model, "model", "m", "", "Specific model to use for the selected provider")
 	cmd.Flags().BoolVarP(&genFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
 	cmd.Flags().BoolVar(&genFlags.IncludeHistory, "history", true, "Include previous commit messages as examples")
 	cmd.Flags().IntVarP(&genFlags.CandidateCount, "count", "n", 2, "Number of commit message suggestions to generate")
@@ -55,6 +53,7 @@ func genAddFlags(cmd *cobra.Command) {
 }
 
 func init() {
+	addCommonLLMFlags(genCmd, &genFlags.Provider, &genFlags.Model)
 	genAddFlags(genCmd)
 
 	rootCmd.AddCommand(genCmd)

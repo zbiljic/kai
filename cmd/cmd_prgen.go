@@ -12,7 +12,6 @@ import (
 	"github.com/orochaa/go-clack/third_party/picocolors"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"github.com/thediveo/enumflag/v2"
 
 	"github.com/zbiljic/kai/pkg/llm"
 )
@@ -37,14 +36,13 @@ var prgenFlags = prgenOptions{
 }
 
 func prgenAddFlags(cmd *cobra.Command) {
-	cmd.Flags().VarP(enumflag.New(&prgenFlags.Provider, "provider", ProviderIds, enumflag.EnumCaseInsensitive), "provider", "p", "LLM provider to use for generating PR messages (phind, openai, googleai, openrouter)")
-	cmd.Flags().StringVarP(&prgenFlags.Model, "model", "m", "", "Specific model to use for the selected provider")
 	cmd.Flags().StringVarP(&prgenFlags.BaseBranch, "base", "b", "main", "Base branch to compare against")
 	cmd.Flags().IntVar(&prgenFlags.MaxDiffSize, "max-diff", 10000, "Maximum size of diff to send to LLM (in characters)")
 	cmd.Flags().BoolVar(&prgenFlags.NoContext, "no-context", false, "Skip prompting for additional context about changes")
 }
 
 func init() {
+	addCommonLLMFlags(prgenCmd, &prgenFlags.Provider, &prgenFlags.Model)
 	prgenAddFlags(prgenCmd)
 
 	rootCmd.AddCommand(prgenCmd)
