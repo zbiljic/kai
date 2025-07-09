@@ -12,6 +12,8 @@ const (
 	PhindProvider ProviderType = iota
 	// OpenAIProvider represents the OpenAI provider.
 	OpenAIProvider
+	// ClaudeProvider represents the Claude provider.
+	ClaudeProvider
 	// GoogleAIProvider represents the GoogleAI provider.
 	GoogleAIProvider
 	// OpenRouterProvider represents the OpenRouter provider.
@@ -24,6 +26,7 @@ const (
 var ProviderIds = map[ProviderType][]string{
 	PhindProvider:      {"phind"},
 	OpenAIProvider:     {"openai"},
+	ClaudeProvider:     {"claude"},
 	GoogleAIProvider:   {"googleai"},
 	OpenRouterProvider: {"openrouter"},
 	GroqProvider:       {"groq"},

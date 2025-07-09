@@ -17,6 +17,7 @@
 *   **Multiple LLM Providers**: Supports various Large Language Model providers for flexibility:
     *   [Phind](https://www.phind.com/) (Default fallback)
     *   [OpenAI](https://openai.com/) (GPT-4o Mini, GPT-3.5 Turbo, etc.)
+    *   [Anthropic](https://www.anthropic.com/) (Claude 3 Haiku, etc.)
     *   [Google AI](https://ai.google.dev/) (Gemini models)
     *   [OpenRouter](https://openrouter.ai/) (various models, including MistralAI)
     *   [Groq](https://groq.com/) (Llama models)
@@ -99,7 +100,7 @@ This command generates Git commit messages based on your staged changes.
     kai gen --provider openai
     kai gen -p googleai
     ```
-    Available providers: `phind` (default fallback), `openai`, `googleai`, `openrouter`, `groq`.
+    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`.
 
 *   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
     ```bash
@@ -165,7 +166,7 @@ To use it:
     kai prgen --provider openai
     kai prgen -p googleai
     ```
-    Available providers: `phind` (default fallback), `openai`, `googleai`, `openrouter`, `groq`.
+    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`.
 
 *   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
     ```bash
@@ -225,14 +226,10 @@ After running `kai absorb`, you can execute `git rebase -i --autosquash` to auto
 2.  **Groq**: Requires `GROQ_API_KEY`
 3.  **OpenRouter**: Requires `OPENROUTER_API_KEY`
 4.  **OpenAI**: Requires `OPENAI_API_KEY`
-5.  **Phind**: Does not require an API key (used as a last resort if others aren't configured).
+5.  **Claude**: Requires `ANTHROPIC_API_KEY`
+6.  **Phind**: Does not require an API key (used as a last resort if others aren't configured).
 
 To configure a provider, set the corresponding environment variable:
-
-*   **OpenAI**:
-    ```bash
-    export OPENAI_API_KEY="your_openai_api_key"
-    ```
 
 *   **Google AI**:
     ```bash
@@ -252,6 +249,16 @@ To configure a provider, set the corresponding environment variable:
     ```bash
     export OPENROUTER_HTTP_REFERER="https://github.com/zbiljic/kai"
     export OPENROUTER_X_TITLE="kai"
+    ```
+
+*   **OpenAI**:
+    ```bash
+    export OPENAI_API_KEY="your_openai_api_key"
+    ```
+
+*   **Anthropic Claude**:
+    ```bash
+    export ANTHROPIC_API_KEY="your_anthropic_api_key"
     ```
 
 ## 🤝 Contributing

@@ -11,10 +11,18 @@ import (
 func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model string) (llm.AIPrompt, error) {
 	if cmdChanged {
 		switch providerType {
+		case PhindProvider:
+			return provider.NewPhindProvider(provider.PhindOptions{
+				Model: model,
+			}), nil
 		case OpenAIProvider:
 			return provider.NewOpenAIProvider(provider.OpenAIOptions{
 				Model: model,
 			}), nil
+		case ClaudeProvider:
+			return provider.NewClaudeProvider(provider.ClaudeOptions{
+				Model: model,
+			})
 		case GoogleAIProvider:
 			return provider.NewGoogleAIProvider(provider.GoogleAIOptions{
 				Model: model,
@@ -25,10 +33,6 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			}), nil
 		case GroqProvider:
 			return provider.NewGroqProvider(provider.GroqOptions{
-				Model: model,
-			}), nil
-		case PhindProvider:
-			return provider.NewPhindProvider(provider.PhindOptions{
 				Model: model,
 			}), nil
 		}
@@ -57,6 +61,11 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			return provider.NewOpenAIProvider(provider.OpenAIOptions{
 				Model: model,
 			}), nil
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewClaudeProvider(provider.ClaudeOptions{
+				Model: model,
+			})
 		}},
 		{create: func() (llm.AIPrompt, error) {
 			return provider.NewPhindProvider(provider.PhindOptions{
