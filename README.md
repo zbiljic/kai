@@ -21,6 +21,7 @@
     *   [Google AI](https://ai.google.dev/) (Gemini models)
     *   [OpenRouter](https://openrouter.ai/) (various models, including MistralAI)
     *   [Groq](https://groq.com/) (Llama models)
+    *   [DeepSeek](https://deepseek.com/) (DeepSeek Chat, DeepSeek Coder, etc.)
 *   **Go-powered**: Built with Go, offering a single, fast binary.
 
 ## 🚀 Installation
@@ -100,7 +101,7 @@ This command generates Git commit messages based on your staged changes.
     kai gen --provider openai
     kai gen -p googleai
     ```
-    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`.
+    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`, `deepseek`.
 
 *   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
     ```bash
@@ -166,7 +167,7 @@ To use it:
     kai prgen --provider openai
     kai prgen -p googleai
     ```
-    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`.
+    Available providers: `phind` (default fallback), `openai`, `claude`, `googleai`, `openrouter`, `groq`, `deepseek`.
 
 *   **Specify Model**: Use the `--model` or `-m` flag to explicitly choose a specific model for the selected provider.
     ```bash
@@ -227,7 +228,8 @@ After running `kai absorb`, you can execute `git rebase -i --autosquash` to auto
 3.  **OpenRouter**: Requires `OPENROUTER_API_KEY`
 4.  **OpenAI**: Requires `OPENAI_API_KEY`
 5.  **Claude**: Requires `ANTHROPIC_API_KEY`
-6.  **Phind**: Does not require an API key (used as a last resort if others aren't configured).
+6.  **DeepSeek**: Requires `DEEPSEEK_API_KEY`
+7.  **Phind**: Does not require an API key (used as a last resort if others aren't configured).
 
 To configure a provider, set the corresponding environment variable:
 
@@ -259,6 +261,11 @@ To configure a provider, set the corresponding environment variable:
 *   **Anthropic Claude**:
     ```bash
     export ANTHROPIC_API_KEY="your_anthropic_api_key"
+    ```
+
+*   **DeepSeek**:
+    ```bash
+    export DEEPSEEK_API_KEY="your_deepseek_api_key"
     ```
 
 ## 🤝 Contributing

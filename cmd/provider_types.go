@@ -20,6 +20,8 @@ const (
 	OpenRouterProvider
 	// GroqProvider represents the Groq provider.
 	GroqProvider
+	// DeepSeekProvider represents the DeepSeek provider.
+	DeepSeekProvider
 )
 
 // ProviderIds maps ProviderType to their string representations.
@@ -30,4 +32,5 @@ var ProviderIds = map[ProviderType][]string{
 	GoogleAIProvider:   {"googleai"},
 	OpenRouterProvider: {"openrouter"},
 	GroqProvider:       {"groq"},
+	DeepSeekProvider:   {"deepseek"},
 }

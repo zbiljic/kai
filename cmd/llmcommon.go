@@ -35,6 +35,10 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			return provider.NewGroqProvider(provider.GroqOptions{
 				Model: model,
 			}), nil
+		case DeepSeekProvider:
+			return provider.NewDeepSeekProvider(provider.DeepSeekOptions{
+				Model: model,
+			}), nil
 		}
 	}
 
@@ -66,6 +70,11 @@ func initializeLLMProvider(cmdChanged bool, providerType ProviderType, model str
 			return provider.NewClaudeProvider(provider.ClaudeOptions{
 				Model: model,
 			})
+		}},
+		{create: func() (llm.AIPrompt, error) {
+			return provider.NewDeepSeekProvider(provider.DeepSeekOptions{
+				Model: model,
+			}), nil
 		}},
 		{create: func() (llm.AIPrompt, error) {
 			return provider.NewPhindProvider(provider.PhindOptions{
