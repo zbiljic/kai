@@ -2,4 +2,4 @@
 "aqua:goreleaser/goreleaser" = "2.10.2"
 "aqua:gotestyourself/gotestsum" = "1.12.3"
 "ubi:mvdan/gofumpt" = "0.8.0"
-golangci-lint = "2.2.1"
+golangci-lint = "2.2.2"
