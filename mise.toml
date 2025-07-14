@@ -1,5 +1,5 @@
 [tools]
-"aqua:goreleaser/goreleaser" = "2.10.2"
+"aqua:goreleaser/goreleaser" = "2.11.0"
 "aqua:gotestyourself/gotestsum" = "1.12.3"
 "ubi:mvdan/gofumpt" = "0.8.0"
 golangci-lint = "2.2.2"
