@@ -450,6 +450,17 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 		return "", nil
 	}
 
+	// Get current HEAD commit SHA
+	currentCommitOut, err := gitexec.RevParse(&gitexec.RevParseOptions{
+		CmdDir: workDir,
+		Arg:    []string{"HEAD"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get current commit: %w", err)
+	}
+
+	currentCommit := strings.TrimSpace(string(currentCommitOut))
+
 	// Check if a backup branch already exists
 	existingBackup, err := gitFindExistingBackupBranch(workDir)
 	if err != nil {
@@ -457,8 +468,22 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 	}
 
 	if existingBackup != "" {
-		// Use the existing backup branch
-		return existingBackup, nil
+		// Check if the existing backup branch is at the same commit as HEAD
+		backupCommitOut, err := gitexec.RevParse(&gitexec.RevParseOptions{
+			CmdDir: workDir,
+			Arg:    []string{existingBackup},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to get backup branch commit: %w", err)
+		}
+
+		backupCommit := strings.TrimSpace(string(backupCommitOut))
+
+		if backupCommit == currentCommit {
+			// Use the existing backup branch since it's at the same commit
+			return existingBackup, nil
+		}
+		// If not at the same commit, we'll create a new backup branch
 	}
 
 	// Create a new backup branch
