@@ -199,13 +199,43 @@ func gitPreviousCommitMessages(workDir string, files []string, maxCommits int) (
 }
 
 // gitLastCommitForFile returns the last commit hash that modified the given file.
-func gitLastCommitForFile(workDir, file string) (string, error) {
+func gitLastCommitForFile(workDir, file string, maxHistory int) (string, error) {
 	opts := &gitexec.LogOptions{
 		CmdDir:                               workDir,
 		MaxCount:                             1,
 		Format:                               "%H",
 		DoNotInterpretMoreArgumentsAsOptions: true,
 		Path:                                 []string{file},
+	}
+
+	// If maxHistory is specified, limit how far back we search
+	if maxHistory > 0 {
+		// Convert maxHistory commits to a time-based limit by getting the date of the Nth commit
+		sinceDate, err := gitGetCommitDateAtIndex(workDir, maxHistory)
+		if err == nil && sinceDate != "" {
+			opts.Since = sinceDate
+		}
+	}
+
+	output, err := gitexec.Log(opts)
+	if err != nil {
+		return "", err
+	}
+
+	if len(output) == 0 {
+		return "", nil
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
+// gitGetCommitDateAtIndex returns the commit date of the Nth commit from HEAD
+func gitGetCommitDateAtIndex(workDir string, index int) (string, error) {
+	opts := &gitexec.LogOptions{
+		CmdDir:   workDir,
+		Format:   "%ci", // ISO 8601 format
+		MaxCount: 1,
+		Skip:     index - 1, // Skip N-1 commits to get the Nth commit
 	}
 
 	output, err := gitexec.Log(opts)
@@ -636,7 +666,7 @@ func gitGetModifiedLineRanges(workDir, file string) ([]LineRange, error) {
 }
 
 // gitBlameLines uses git blame to find which commits introduced specific lines
-func gitBlameLines(workDir, file string, lineRanges []LineRange) ([]BlameInfo, error) {
+func gitBlameLines(workDir, file string, lineRanges []LineRange, maxHistory int) ([]BlameInfo, error) {
 	var blameInfo []BlameInfo
 
 	for _, lineRange := range lineRanges {
@@ -675,7 +705,7 @@ func gitBlameLines(workDir, file string, lineRanges []LineRange) ([]BlameInfo, e
 
 // gitFindBestCommitForFile uses line-based analysis to find the most appropriate commit
 // to target for fixup based on which commit introduced the most modified lines
-func gitFindBestCommitForFile(workDir, file string) (string, error) {
+func gitFindBestCommitForFile(workDir, file string, maxHistory int) (string, error) {
 	// Get the line ranges that are being modified
 	modifiedRanges, err := gitGetModifiedLineRanges(workDir, file)
 	if err != nil {
@@ -684,18 +714,18 @@ func gitFindBestCommitForFile(workDir, file string) (string, error) {
 
 	if len(modifiedRanges) == 0 {
 		// fallback to last commit for the file
-		return gitLastCommitForFile(workDir, file)
+		return gitLastCommitForFile(workDir, file, maxHistory)
 	}
 
 	// Get blame information for the modified lines
-	blameInfo, err := gitBlameLines(workDir, file, modifiedRanges)
+	blameInfo, err := gitBlameLines(workDir, file, modifiedRanges, maxHistory)
 	if err != nil {
 		return "", fmt.Errorf("failed to get blame information: %w", err)
 	}
 
 	if len(blameInfo) == 0 {
 		// fallback to last commit for the file
-		return gitLastCommitForFile(workDir, file)
+		return gitLastCommitForFile(workDir, file, maxHistory)
 	}
 
 	// Score each commit based on how many modified lines it introduced
@@ -727,7 +757,7 @@ func gitFindBestCommitForFile(workDir, file string) (string, error) {
 
 	if bestCommit == "" {
 		// fallback to last commit for the file
-		return gitLastCommitForFile(workDir, file)
+		return gitLastCommitForFile(workDir, file, maxHistory)
 	}
 
 	return bestCommit, nil

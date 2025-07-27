@@ -21,6 +21,9 @@ This command analyzes your staged changes and creates fixup commits targeting th
 original commits that introduced the changes. This is useful for making small
 fixes to existing commits during code review.
 
+By default, the command searches up to 20 commits back in history. You can adjust
+this limit using the --max-history flag.
+
 After running this command, you can run 'git rebase -i --autosquash' to automatically
 fold the fixup commits into their target commits.
 
@@ -29,10 +32,11 @@ If --and-rebase is specified, the rebase will be run automatically.`,
 }
 
 var absorbFlags = absorbOptions{
-	AndRebase: false,
-	DryRun:    false,
-	Backup:    false,
-	All:       false,
+	AndRebase:  false,
+	DryRun:     false,
+	Backup:     false,
+	All:        false,
+	MaxHistory: 20,
 }
 
 func absorbAddFlags(cmd *cobra.Command) {
@@ -40,6 +44,7 @@ func absorbAddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&absorbFlags.DryRun, "dry-run", "n", false, "Don't make any actual changes")
 	cmd.Flags().BoolVarP(&absorbFlags.Backup, "backup", "b", false, "Create a backup branch before rebasing")
 	cmd.Flags().BoolVarP(&absorbFlags.All, "all", "a", false, "Automatically stage all changes in tracked files")
+	cmd.Flags().IntVar(&absorbFlags.MaxHistory, "max-history", 20, "Maximum number of commits to look back in history")
 }
 
 func init() {
@@ -49,10 +54,11 @@ func init() {
 }
 
 type absorbOptions struct {
-	AndRebase bool
-	DryRun    bool
-	Backup    bool
-	All       bool
+	AndRebase  bool
+	DryRun     bool
+	Backup     bool
+	All        bool
+	MaxHistory int
 }
 
 func absorbSetup(cmd *cobra.Command) (string, error) {
@@ -168,7 +174,7 @@ func absorbFindFixupCommits(workDir string, stagedFiles []string) (map[string][]
 
 	for _, file := range stagedFiles {
 		// Use line-based analysis to find the best commit to target for fixup
-		commitHash, err := gitFindBestCommitForFile(workDir, file)
+		commitHash, err := gitFindBestCommitForFile(workDir, file, absorbFlags.MaxHistory)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find best commit for %s: %w", file, err)
 		}
