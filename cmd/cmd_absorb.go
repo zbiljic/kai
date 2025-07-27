@@ -249,13 +249,17 @@ func absorbHandleRebase(workDir string, fixupCommits map[string][]string) error 
 }
 
 func absorbCreateBackupIfNeeded(workDir string) (string, error) {
-	backupBranch, err := createBackupBranchIfNeeded(workDir, absorbFlags.Backup)
+	backupBranch, isNewBranch, err := createBackupBranchIfNeeded(workDir, absorbFlags.Backup)
 	if err != nil {
 		return "", err
 	}
 
 	if backupBranch != "" {
-		prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
+		if isNewBranch {
+			prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+		} else {
+			prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
+		}
 	}
 
 	return backupBranch, nil

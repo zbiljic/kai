@@ -208,13 +208,17 @@ func getHunksForCommit(hunkIDs []string, hunkMap map[string]*gitdiff.Hunk) []*gi
 
 // prprepareCreateBackupIfNeeded creates a backup branch if needed, checking for existing ones first
 func prprepareCreateBackupIfNeeded(workDir string) (string, error) {
-	backupBranch, err := createBackupBranchIfNeeded(workDir, true)
+	backupBranch, isNewBranch, err := createBackupBranchIfNeeded(workDir, true)
 	if err != nil {
 		return "", err
 	}
 
 	if backupBranch != "" {
-		prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
+		if isNewBranch {
+			prompts.Info(fmt.Sprintf("Created backup branch: %s", backupBranch))
+		} else {
+			prompts.Info(fmt.Sprintf("Using existing backup branch: %s", backupBranch))
+		}
 	}
 
 	return backupBranch, nil

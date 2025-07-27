@@ -445,9 +445,10 @@ func gitFindExistingBackupBranch(workDir string) (string, error) {
 
 // createBackupBranchIfNeeded creates a backup branch if needed, checking for existing ones first.
 // This is a common function used by multiple commands to avoid creating duplicate backup branches.
-func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, error) {
+// Returns the branch name, whether a new branch was created, and any error.
+func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, bool, error) {
 	if !shouldCreate {
-		return "", nil
+		return "", false, nil
 	}
 
 	// Get current HEAD commit SHA
@@ -456,7 +457,7 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 		Arg:    []string{"HEAD"},
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to get current commit: %w", err)
+		return "", false, fmt.Errorf("failed to get current commit: %w", err)
 	}
 
 	currentCommit := strings.TrimSpace(string(currentCommitOut))
@@ -464,7 +465,7 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 	// Check if a backup branch already exists
 	existingBackup, err := gitFindExistingBackupBranch(workDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to check for existing backup branch: %w", err)
+		return "", false, fmt.Errorf("failed to check for existing backup branch: %w", err)
 	}
 
 	if existingBackup != "" {
@@ -474,14 +475,14 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 			Arg:    []string{existingBackup},
 		})
 		if err != nil {
-			return "", fmt.Errorf("failed to get backup branch commit: %w", err)
+			return "", false, fmt.Errorf("failed to get backup branch commit: %w", err)
 		}
 
 		backupCommit := strings.TrimSpace(string(backupCommitOut))
 
 		if backupCommit == currentCommit {
 			// Use the existing backup branch since it's at the same commit
-			return existingBackup, nil
+			return existingBackup, false, nil
 		}
 		// If not at the same commit, we'll create a new backup branch
 	}
@@ -489,10 +490,10 @@ func createBackupBranchIfNeeded(workDir string, shouldCreate bool) (string, erro
 	// Create a new backup branch
 	backupBranch, err := gitCreateBackupBranch(workDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to create backup branch: %w", err)
+		return "", false, fmt.Errorf("failed to create backup branch: %w", err)
 	}
 
-	return backupBranch, nil
+	return backupBranch, true, nil
 }
 
 // gitGetCommitsBetweenBranches returns commits between current branch and base branch
