@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -142,7 +143,8 @@ func genDetectAndStageFiles(workDir string, all bool) ([]string, string, error) 
 }
 
 // genGetPreviousCommitsForStagedFiles returns previous commit messages for all
-// staged files.
+// staged files. For new files without history, it tries to get commit history
+// from their parent directories.
 func genGetPreviousCommitsForStagedFiles(workDir string) ([]string, error) {
 	stagedFiles, err := gitStagedFiles(workDir)
 	if err != nil {
@@ -156,20 +158,59 @@ func genGetPreviousCommitsForStagedFiles(workDir string) ([]string, error) {
 
 	// Get previous commit messages for staged files
 	allMessages := make(map[string]struct{})
+	filesWithoutHistory := []string{}
+
 	for _, file := range stagedFiles {
 		fileMessages, err := gitPreviousCommitMessages(workDir, []string{file}, llm.DefaultMaxCommitsPerFile)
 		if err != nil {
 			continue // Skip files with errors
 		}
 
-		// Add messages to the deduplicated set
-		for _, msg := range fileMessages {
-			allMessages[msg] = struct{}{}
+		// If no history for this file, remember it for directory fallback
+		if len(fileMessages) == 0 {
+			filesWithoutHistory = append(filesWithoutHistory, file)
+		} else {
+			// Add messages to the deduplicated set
+			for _, msg := range fileMessages {
+				allMessages[msg] = struct{}{}
+			}
 		}
 
 		// Limit the total number of messages
 		if len(allMessages) >= llm.DefaultMaxTotalCommits {
 			break
+		}
+	}
+
+	// For files without history, try to get commit history from their directories
+	if len(filesWithoutHistory) > 0 && len(allMessages) < llm.DefaultMaxTotalCommits {
+		// Get unique directories from files without history
+		dirSet := make(map[string]struct{})
+		for _, file := range filesWithoutHistory {
+			dir := filepath.Dir(file)
+			// Skip root directory
+			if dir != "." && dir != "/" {
+				dirSet[dir] = struct{}{}
+			}
+		}
+
+		// Convert to slice
+		var directories []string
+		for dir := range dirSet {
+			directories = append(directories, dir)
+		}
+
+		if len(directories) > 0 {
+			remainingCommits := llm.DefaultMaxTotalCommits - len(allMessages)
+			dirMessages, err := gitPreviousCommitMessagesForDirectories(workDir, directories, remainingCommits)
+			if err == nil {
+				for _, msg := range dirMessages {
+					allMessages[msg] = struct{}{}
+					if len(allMessages) >= llm.DefaultMaxTotalCommits {
+						break
+					}
+				}
+			}
 		}
 	}
 

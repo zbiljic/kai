@@ -198,6 +198,42 @@ func gitPreviousCommitMessages(workDir string, files []string, maxCommits int) (
 	return result, nil
 }
 
+// gitPreviousCommitMessagesForDirectories returns previous commit messages for the specified directories.
+func gitPreviousCommitMessagesForDirectories(workDir string, directories []string, maxCommits int) ([]string, error) {
+	if len(directories) == 0 {
+		return nil, nil
+	}
+
+	opts := &gitexec.LogOptions{
+		CmdDir:   workDir,
+		MaxCount: maxCommits,
+		Format:   "%s", // subject only
+		Path:     directories,
+	}
+
+	output, err := gitexec.Log(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(output) == 0 {
+		return nil, nil
+	}
+
+	// Split by newlines and filter out empty messages
+	messages := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var result []string
+
+	for _, msg := range messages {
+		trimmed := strings.TrimSpace(msg)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result, nil
+}
+
 // gitLastCommitForFile returns the last commit hash that modified the given file.
 func gitLastCommitForFile(workDir, file string, maxHistory int) (string, error) {
 	opts := &gitexec.LogOptions{
