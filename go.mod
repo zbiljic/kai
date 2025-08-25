@@ -16,7 +16,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/zbiljic/gitexec v0.0.0-20250808182111-e2b9e97e34c9
 	golang.org/x/term v0.34.0
-	google.golang.org/genai v1.20.0
+	google.golang.org/genai v1.21.0
 )
 
 require (
