@@ -1,6 +1,6 @@
 module github.com/zbiljic/kai
 
-go 1.23.3
+go 1.24.7
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.12.0
