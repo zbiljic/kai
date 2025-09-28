@@ -39,12 +39,12 @@ func Load() (*Config, error) {
 
 // Save saves configuration to a file
 func Save(config *Config, filename string) error {
-	configMutex.Lock()
-	defer configMutex.Unlock()
-
-	if cachedConfig == nil {
+	if config == nil || filename == "" {
 		return errInvalidArgument
 	}
+
+	configMutex.Lock()
+	defer configMutex.Unlock()
 
 	// ensure directory exists
 	dir := filepath.Dir(filename)
@@ -56,7 +56,7 @@ func Save(config *Config, filename string) error {
 		return errFailedToSaveConfig(filename, err)
 	}
 
-	// update the cached config
+	// update the cached config so subsequent loads see saved state
 	cachedConfig = config
 
 	return nil
