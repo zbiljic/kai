@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	googleAIModel = "gemini-2.5-flash-preview-05-20"
+	googleAIModel = "gemini-2.5-flash-preview-09-2025"
 )
 
 // Compile-time proof of interface implementation.
