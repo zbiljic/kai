@@ -1,3 +1,4 @@
+//nolint:unused
 package config
 
 const configVersionV0 = "0"

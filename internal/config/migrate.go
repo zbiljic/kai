@@ -31,7 +31,21 @@ func loadCreateMigrate() (*Config, error) {
 
 	switch version {
 	case configVersionV0:
-		config, err := vconfig.LoadConfig[configV0](configPath)
+		_, err := vconfig.LoadConfig[configV0](configPath)
+		if err != nil {
+			return nil, errLoadVersion(version, err)
+		}
+
+		// migrate to v1
+		newConfig := newConfigV1()
+
+		if err := vconfig.SaveConfig(newConfig, configPath); err != nil {
+			return nil, errFailedToSaveConfig(configPath, err)
+		}
+
+		return loadCreateMigrate()
+	case configVersionV1:
+		config, err := vconfig.LoadConfig[configV1](configPath)
 		if err != nil {
 			return nil, errLoadVersion(version, err)
 		}
