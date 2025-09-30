@@ -15,7 +15,7 @@ import (
 
 const (
 	openaiBaseURL = "https://api.openai.com/v1/chat/completions"
-	openaiModel   = openai.GPT4oMini
+	openaiModel   = openai.GPT5Nano
 )
 
 // Compile-time proof of interface implementation.
