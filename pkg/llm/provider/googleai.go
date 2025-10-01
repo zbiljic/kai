@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"google.golang.org/genai"
@@ -106,21 +107,27 @@ func (p *GoogleAI) Generate(ctx context.Context, systemPrompt, userPrompt string
 
 	var results []string
 	for _, cand := range resp.Candidates {
-		if cand.Content != nil && len(cand.Content.Parts) > 0 {
-			var fullText string
-			for _, part := range cand.Content.Parts {
-				if txt := part.Text; txt != "" {
-					fullText += txt
-				}
+		if cand.Content == nil {
+			continue
+		}
+
+		for _, part := range cand.Content.Parts {
+			if part == nil {
+				continue
 			}
-			if fullText != "" {
-				results = append(results, fullText)
+
+			if txt := strings.TrimSpace(part.Text); txt != "" {
+				results = append(results, txt)
 			}
 		}
 	}
 
-	// remove duplicates
+	// remove duplicates while preserving original order from the model
 	results = slice.Unique(results)
+
+	if candidateCount > 0 && len(results) > candidateCount {
+		results = results[:candidateCount]
+	}
 
 	if len(results) == 0 {
 		var finishReasons []string
