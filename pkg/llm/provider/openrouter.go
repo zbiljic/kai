@@ -15,7 +15,7 @@ import (
 
 const (
 	openRouterBaseURL = "https://openrouter.ai/api/v1/chat/completions"
-	openRouterModel   = "mistralai/devstral-small:free"
+	openRouterModel   = "x-ai/grok-4-fast:free"
 )
 
 // Compile-time proof of interface implementation.
