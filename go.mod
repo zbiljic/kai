@@ -9,7 +9,7 @@ require (
 	github.com/duke-git/lancet/v2 v2.3.7
 	github.com/mattn/go-isatty v0.0.20
 	github.com/orochaa/go-clack v0.1.18
-	github.com/samber/lo v1.51.0
+	github.com/samber/lo v1.52.0
 	github.com/sashabaranov/go-openai v1.41.2
 	github.com/spf13/cobra v1.10.1
 	github.com/thediveo/enumflag/v2 v2.0.7
