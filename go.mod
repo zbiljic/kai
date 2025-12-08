@@ -11,7 +11,7 @@ require (
 	github.com/orochaa/go-clack v0.1.18
 	github.com/samber/lo v1.52.0
 	github.com/sashabaranov/go-openai v1.41.2
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/thediveo/enumflag/v2 v2.0.7
 	github.com/tidwall/gjson v1.18.0
 	github.com/zbiljic/gitexec v0.0.0-20250808182111-e2b9e97e34c9
