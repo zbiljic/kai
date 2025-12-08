@@ -17,7 +17,7 @@ require (
 	github.com/zbiljic/gitexec v0.0.0-20250808182111-e2b9e97e34c9
 	github.com/zbiljic/vconfig-go v0.0.0-20251207163943-d71dcad21c24
 	golang.org/x/term v0.37.0
-	google.golang.org/genai v1.36.0
+	google.golang.org/genai v1.38.0
 )
 
 require (
