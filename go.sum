@@ -102,8 +102,8 @@ github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/zbiljic/gitexec v0.0.0-20260504005533-6f0a916139bf h1:28F8jM99KV9frXh4e3AMhXcVJ+Vke0n0cmlhjuOU33Y=
 github.com/zbiljic/gitexec v0.0.0-20260504005533-6f0a916139bf/go.mod h1:QYnDus9R/pbPT4CVVPdDjzWNjXlokIWYXQSFEOASsIM=
-github.com/zbiljic/vconfig-go v0.0.0-20260325205145-58ca440dd567 h1:rw8HpuwwkCxmQbTKXU44ZiPmf5jkedmJ6dDemgq/tCM=
-github.com/zbiljic/vconfig-go v0.0.0-20260325205145-58ca440dd567/go.mod h1:01/QIV3Auw6eBzGE+a7YEm8RBRUArL97vaB28mY1MW0=
+github.com/zbiljic/vconfig-go v0.0.0-20260509130141-20816a9f53f1 h1:daK/eyeewLDVVQzXZmYg362L7mPEmHPocYZ+JUeGNTA=
+github.com/zbiljic/vconfig-go v0.0.0-20260509130141-20816a9f53f1/go.mod h1:01/QIV3Auw6eBzGE+a7YEm8RBRUArL97vaB28mY1MW0=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 h1:sbiXRNDSWJOTobXh5HyQKjq6wUC5tNybqjIqDpAY4CU=
