@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/thediveo/enumflag/v2 v2.2.0
 	github.com/tidwall/gjson v1.18.0
-	github.com/zbiljic/gitexec v0.0.0-20260413103359-5faea7520fe2
+	github.com/zbiljic/gitexec v0.0.0-20260504005533-6f0a916139bf
 	github.com/zbiljic/vconfig-go v0.0.0-20260325205145-58ca440dd567
 	golang.org/x/term v0.42.0
 	google.golang.org/genai v1.55.0
