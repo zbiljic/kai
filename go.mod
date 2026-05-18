@@ -3,7 +3,7 @@ module github.com/zbiljic/kai
 go 1.25.0
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.42.0
+	github.com/anthropics/anthropic-sdk-go v1.43.0
 	github.com/carlmjohnson/requests v0.25.1
 	github.com/coreos/go-semver v0.3.1
 	github.com/duke-git/lancet/v2 v2.3.9
@@ -38,7 +38,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	github.com/standard-webhooks/standard-webhooks/libraries v0.0.0-20260508151727-1282bb917829 // indirect
+	github.com/standard-webhooks/standard-webhooks/libraries v0.0.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
