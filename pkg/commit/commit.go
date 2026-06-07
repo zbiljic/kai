@@ -22,12 +22,12 @@ func (m Message) ToString() string {
 		}
 		m.Type = strings.TrimSpace(m.Type)
 		out += m.Type
+		m.Scope = strings.TrimSpace(m.Scope)
+		if strings.HasSuffix(m.Scope, "!") {
+			m.Scope = strings.TrimSpace(m.Scope[:len(m.Scope)-1])
+			m.Breaking = true
+		}
 		if m.Scope != "" {
-			if strings.HasSuffix(m.Scope, "!") {
-				m.Scope = m.Scope[:len(m.Scope)-1]
-				m.Breaking = true
-			}
-			m.Scope = strings.TrimSpace(m.Scope)
 			out += fmt.Sprintf("(%s)", m.Scope)
 		}
 		if m.Breaking {

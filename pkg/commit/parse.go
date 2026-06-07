@@ -2,7 +2,7 @@ package commit
 
 import "regexp"
 
-var commitMessageRegex = regexp.MustCompile(`^(?P<type>\w+)(\((?P<scope>[\w\-\.\/]+)\))?(!)?: (?P<message>.+)$`)
+var commitMessageRegex = regexp.MustCompile(`^(?P<type>\w+)(\((?P<scope>[^)]+)\))?(!)?: (?P<message>.+)$`)
 
 func ParseMessage(message string) Message {
 	match := commitMessageRegex.FindStringSubmatch(message)

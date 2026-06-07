@@ -35,6 +35,14 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			input: "refactor(api,client): simplify configuration",
+			expected: Message{
+				Type:          "refactor",
+				Scope:         "api,client",
+				CommitMessage: "simplify configuration",
+			},
+		},
+		{
 			input: "chore: update dependencies",
 			expected: Message{
 				Type:          "chore",

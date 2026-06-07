@@ -365,8 +365,7 @@ func genEditCommitMessage(message string, commitType commit.Type) (string, error
 					initialValue += "!"
 				}
 				return prompts.Text(prompts.TextParams{
-					Message:      "Enter a scope",
-					Placeholder:  "<optional scope>",
+					Message:      "Enter a scope (optional)",
 					InitialValue: initialValue,
 					Validate: func(value string) error {
 						return nil
