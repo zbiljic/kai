@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	claudeModel = string(anthropic.ModelClaude3_5HaikuLatest)
+	claudeModel = string(anthropic.ModelClaudeHaiku4_5)
 )
 
 // Compile-time proof of interface implementation.
