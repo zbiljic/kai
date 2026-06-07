@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	claudeModel = string(anthropic.ModelClaudeHaiku4_5)
+	claudeModel = anthropic.ModelClaudeHaiku4_5
 )
 
 // Compile-time proof of interface implementation.
@@ -88,7 +88,7 @@ func (c *Claude) Generate(ctx context.Context, systemPrompt, userPrompt string, 
 	// Make multiple requests since Claude only supports N=1
 	for i := 0; i < candidateCount; i++ {
 		resp, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
-			Model:     anthropic.Model(c.options.Model),
+			Model:     c.options.Model,
 			System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
 			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock(userPrompt))},
 			MaxTokens: 1024,
