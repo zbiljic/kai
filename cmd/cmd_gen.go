@@ -343,7 +343,8 @@ func genEditCommitMessage(message string, commitType commit.Type) (string, error
 						return []*prompts.SelectOption[string]{
 							{Label: item, Value: item},
 						}
-					})...)
+					},
+				)...)
 
 				sort.Slice(options, func(i, j int) bool {
 					return options[i].Label < options[j].Label

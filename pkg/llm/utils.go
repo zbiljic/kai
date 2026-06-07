@@ -32,7 +32,7 @@ func mapToTable(m map[string]string) string {
 
 	// Add table rows
 	for _, k := range keys {
-		sb.WriteString(fmt.Sprintf("| %s | %s |\n", k, m[k]))
+		fmt.Fprintf(&sb, "| %s | %s |\n", k, m[k])
 	}
 
 	return sb.String()

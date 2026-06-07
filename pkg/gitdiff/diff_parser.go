@@ -246,7 +246,8 @@ func createAbsolutelyMinimalPatch(hunks []*Hunk, baseDiff string) string {
 
 			if isNewFile {
 				// Provide mandatory markers for new files so git create them properly
-				patchParts = append(patchParts,
+				patchParts = append(
+					patchParts,
 					"new file mode 100644",   // default mode
 					"index 0000000..0000000", // placeholder SHAs (git will ignore)
 					"--- /dev/null",
@@ -254,7 +255,8 @@ func createAbsolutelyMinimalPatch(hunks []*Hunk, baseDiff string) string {
 				)
 			} else {
 				// Existing file fallback header
-				patchParts = append(patchParts,
+				patchParts = append(
+					patchParts,
 					fmt.Sprintf("--- a/%s", filePath),
 					fmt.Sprintf("+++ b/%s", filePath),
 				)
