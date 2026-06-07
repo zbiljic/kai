@@ -365,13 +365,19 @@ func genEditCommitMessage(message string, commitType commit.Type) (string, error
 				if commitMessage.Breaking {
 					initialValue += "!"
 				}
-				return prompts.Text(prompts.TextParams{
-					Message:      "Enter a scope (optional)",
+				const optionalScopePlaceholder = "<optional scope>"
+				scope, err := prompts.Text(prompts.TextParams{
+					Message:      "Enter a scope",
+					Placeholder:  optionalScopePlaceholder,
 					InitialValue: initialValue,
 					Validate: func(value string) error {
 						return nil
 					},
 				})
+				if scope == optionalScopePlaceholder {
+					return "", err
+				}
+				return scope, err
 			}).
 		Step("CommitMessage", func() (any, error) {
 			return prompts.Text(prompts.TextParams{
