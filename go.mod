@@ -15,7 +15,7 @@ require (
 	github.com/thediveo/enumflag/v2 v2.2.1
 	github.com/tidwall/gjson v1.19.0
 	github.com/zbiljic/gitexec v0.0.0-20260615054605-97f11f102d6f
-	github.com/zbiljic/vconfig-go v0.0.0-20260509130141-20816a9f53f1
+	github.com/zbiljic/vconfig-go v0.0.0-20260706193423-95d7c1656aba
 	golang.org/x/term v0.44.0
 	google.golang.org/genai v1.62.0
 )
