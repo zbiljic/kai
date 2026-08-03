@@ -10,7 +10,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/orochaa/go-clack v0.1.21
 	github.com/samber/lo v1.53.0
-	github.com/sashabaranov/go-openai v1.41.2
+	github.com/sashabaranov/go-openai v1.42.0
 	github.com/spf13/cobra v1.10.2
 	github.com/thediveo/enumflag/v2 v2.2.1
 	github.com/tidwall/gjson v1.19.0
