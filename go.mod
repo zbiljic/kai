@@ -1,6 +1,6 @@
 module github.com/zbiljic/kai
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.71.0
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/thediveo/enumflag/v2 v2.2.1
 	github.com/tidwall/gjson v1.19.0
-	github.com/zbiljic/gitexec v0.0.0-20260831024034-b1ec4841e521
+	github.com/zbiljic/gitexec v0.0.0-20260914095020-4db2ad0c60fd
 	github.com/zbiljic/vconfig-go v0.0.0-20260911005512-5ca367e5d534
 	golang.org/x/term v0.45.0
 	google.golang.org/genai v1.71.0
@@ -52,7 +52,7 @@ require (
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/grpc v1.72.1 // indirect
