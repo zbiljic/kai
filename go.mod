@@ -13,7 +13,7 @@ require (
 	github.com/sashabaranov/go-openai v1.43.0
 	github.com/spf13/cobra v1.10.2
 	github.com/thediveo/enumflag/v2 v2.2.1
-	github.com/tidwall/gjson v1.19.0
+	github.com/tidwall/gjson v1.20.0
 	github.com/zbiljic/gitexec v0.0.0-20260928023615-7d76f5852030
 	github.com/zbiljic/vconfig-go v0.0.0-20260927145521-c8825e04fc4e
 	golang.org/x/term v0.46.0
