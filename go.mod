@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.78.0
-	github.com/carlmjohnson/requests v0.26.1
+	github.com/carlmjohnson/requests v0.26.2
 	github.com/coreos/go-semver v0.3.1
 	github.com/duke-git/lancet/v2 v2.3.9
 	github.com/mattn/go-isatty v0.0.24
