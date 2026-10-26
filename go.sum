@@ -137,8 +137,8 @@ github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zI
 github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT040gmv5BQTMR2HP4=
 github.com/zbiljic/gitexec v0.0.0-20261019013011-f74a0cb76ec9 h1:xG9soNEmDX49vl+H3fXBtN6SLuGmR75tNwGvnAA2Q20=
 github.com/zbiljic/gitexec v0.0.0-20261019013011-f74a0cb76ec9/go.mod h1:E9v1ldYF7TIzh6AZh5LbRGwYAbVbvQOIYlmEVqhVuqc=
-github.com/zbiljic/vconfig-go v0.0.0-20260927145521-c8825e04fc4e h1:jFMCyCJwXmNSuWsOlzcfQgEgKyo8gC9cybfcEVKWbsk=
-github.com/zbiljic/vconfig-go v0.0.0-20260927145521-c8825e04fc4e/go.mod h1:01/QIV3Auw6eBzGE+a7YEm8RBRUArL97vaB28mY1MW0=
+github.com/zbiljic/vconfig-go v0.0.0-20261020105519-382dc84685e2 h1:x70vo4ZkBhmoWbxeWiAc1Qe4qUfko80UjDdV9V6ZIGk=
+github.com/zbiljic/vconfig-go v0.0.0-20261020105519-382dc84685e2/go.mod h1:01/QIV3Auw6eBzGE+a7YEm8RBRUArL97vaB28mY1MW0=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 h1:q4XOmH/0opmeuJtPsbFNivyl7bCt7yRBbeEm2sC/XtQ=
