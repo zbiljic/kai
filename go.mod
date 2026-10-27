@@ -6,7 +6,7 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
 	github.com/carlmjohnson/requests v0.26.2
 	github.com/coreos/go-semver v0.3.1
-	github.com/duke-git/lancet/v2 v2.3.9
+	github.com/duke-git/lancet/v2 v2.4.0
 	github.com/mattn/go-isatty v0.0.24
 	github.com/orochaa/go-clack v0.1.21
 	github.com/samber/lo v1.53.0
