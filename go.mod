@@ -1,10 +1,10 @@
 module github.com/zbiljic/kai
 
-go 1.26.0
+go 1.27
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
-	github.com/carlmjohnson/requests v0.26.2
+	github.com/carlmjohnson/requests v0.26.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/duke-git/lancet/v2 v2.4.0
 	github.com/mattn/go-isatty v0.0.24
@@ -50,12 +50,12 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
