@@ -16,7 +16,7 @@ require (
 	github.com/tidwall/gjson v1.20.4
 	github.com/zbiljic/gitexec v0.0.0-20261026023616-b32111aa70d2
 	github.com/zbiljic/vconfig-go v0.0.0-20261020105519-382dc84685e2
-	golang.org/x/term v0.47.0
+	golang.org/x/term v0.48.0
 	google.golang.org/genai v1.77.0
 )
 
@@ -54,7 +54,7 @@ require (
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect
