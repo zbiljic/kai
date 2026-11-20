@@ -3,7 +3,7 @@ module github.com/zbiljic/kai
 go 1.27
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.84.0
+	github.com/anthropics/anthropic-sdk-go/v2 v2.13.0
 	github.com/carlmjohnson/requests v0.26.3
 	github.com/coreos/go-semver v0.3.1
 	github.com/duke-git/lancet/v2 v2.4.0
